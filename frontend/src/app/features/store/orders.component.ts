@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from "@angular/core";
+import { Component, inject, computed, signal } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
 import { InventoryDataService, AuthStateService, Order } from "ui-shared";
@@ -8,302 +8,285 @@ import { InventoryDataService, AuthStateService, Order } from "ui-shared";
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="orders-container">
-      <h1>My Orders</h1>
+    <div class="shopper-orders animate-fade-in">
+      <header class="orders-head">
+        <h1>Orders</h1>
+        <p>You have {{ userOrders().length }} orders in your history.</p>
+      </header>
+
+      <div class="stats-row">
+        <div class="stat-box">
+          <span class="l">Total</span>
+          <span class="v">{{ userOrders().length }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="l">Pending</span>
+          <span class="v">{{ pendingCount() }}</span>
+        </div>
+      </div>
 
       <div class="orders-list" *ngIf="userOrders().length > 0; else noOrders">
-        <div class="order-card" *ngFor="let order of userOrders()">
-          <div class="order-header">
-            <div class="header-info">
-              <span class="order-number">Order #{{ order.id }}</span>
-              <span class="order-date">Placed on {{ order.date }}</span>
+        <div class="order-card shopper-card" *ngFor="let order of userOrders()">
+          <div class="order-info">
+            <div class="id-col">
+              <span class="l">Order #</span>
+              <span class="v">{{ order.id }}</span>
             </div>
-            <div class="header-status">
-              <span class="status-badge" [class]="order.status.toLowerCase()">{{
+
+            <div class="meta-row">
+              <div class="m-col">
+                <span class="l">Date</span>
+                <span class="v">{{ order.date }}</span>
+              </div>
+              <div class="m-col">
+                <span class="l">Total</span>
+                <span class="v p">{{ order.amount | currency }}</span>
+              </div>
+            </div>
+
+            <div class="status-col">
+              <span class="status-tag" [attr.data-status]="order.status">{{
                 order.status
               }}</span>
             </div>
-          </div>
 
-          <div class="order-body">
-            <div class="order-items">
-              <div class="order-item" *ngFor="let item of order.items">
-                <span class="item-qty">{{ item.qty }}x</span>
-                <span class="item-name">{{ item.name }}</span>
-                <span class="item-price">{{
-                  item.price * item.qty | currency
-                }}</span>
-              </div>
-            </div>
-
-            <div class="order-summary">
-              <div class="total-row">
-                <span>Total Amount:</span>
-                <span class="total-price">{{ order.amount | currency }}</span>
-              </div>
+            <div class="action-col">
+              <button class="btn-detail" (click)="toggleDetails(order.id)">
+                {{ expandedOrderId() === order.id ? "Hide" : "Details" }}
+              </button>
             </div>
           </div>
 
-          <div class="order-actions">
-            <button class="track-btn">Track Shipment</button>
-            <button
-              class="cancel-btn"
-              *ngIf="
-                order.status === 'Pending' || order.status === 'Processing'
-              "
-              (click)="requestCancel(order.id)"
-            >
-              Request Cancellation
-            </button>
+          <div
+            class="order-expand animate-slide-up"
+            *ngIf="expandedOrderId() === order.id"
+          >
+            <div class="item-table">
+              <div class="t-head">
+                <span>Product</span>
+                <span>Qty</span>
+                <span>Price</span>
+              </div>
+              <div class="t-row" *ngFor="let item of order.items">
+                <span class="n">{{ item.name }}</span>
+                <span>{{ item.qty }}</span>
+                <span class="p">{{ item.price | currency }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <ng-template #noOrders>
-        <div class="empty-state">
-          <div class="empty-icon">📦</div>
+        <div class="no-orders shopper-card">
+          <div class="icon">📦</div>
           <h2>No orders yet</h2>
-          <p>You haven't placed any orders yet. Start exploring our catalog!</p>
-          <button class="shop-btn" routerLink="/store">Start Shopping</button>
+          <button class="btn-detail !w-auto !px-10" routerLink="/store">
+            Go Shopping
+          </button>
         </div>
       </ng-template>
-    </div>
-
-    <!-- Cancellation Modal Placeholder -->
-    <div class="modal-overlay" *ngIf="showCancelModal()">
-      <div class="modal-content">
-        <h2>Cancel Order #{{ selectedOrderId() }}</h2>
-        <p>
-          Are you sure you want to request a cancellation for this order? This
-          action cannot be undone.
-        </p>
-        <div class="modal-actions">
-          <button class="confirm-btn" (click)="confirmCancel()">
-            Confirm Cancellation
-          </button>
-          <button class="close-btn" (click)="showCancelModal.set(false)">
-            Close
-          </button>
-        </div>
-      </div>
     </div>
   `,
   styles: [
     `
-      .orders-container {
-        max-width: 900px;
+      .shopper-orders {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 1000px;
         margin: 0 auto;
       }
 
-      h1 {
-        margin-bottom: 2rem;
+      .orders-head h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 0;
+        color: var(--text);
+        letter-spacing: -0.02em;
+      }
+      .orders-head p {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+      }
+
+      .stats-row {
+        display: flex;
+        gap: 1rem;
+      }
+      .stat-box {
+        flex: 1;
+        padding: 1.25rem;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .stat-box .l {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+      }
+      .stat-box .v {
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--primary);
       }
 
       .orders-list {
         display: flex;
         flex-direction: column;
-        gap: 2rem;
+        gap: 0.75rem;
       }
-
-      .order-card {
-        background: var(--bg-card, #ffffff);
+      .shopper-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 1rem;
-        border: 1px solid var(--border-color, #e2e8f0);
-        overflow: hidden;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
       }
 
-      .order-header {
-        padding: 1.5rem;
-        background: var(--bg-main, #f8fafc);
-        border-bottom: 1px solid var(--border-color, #e2e8f0);
-        display: flex;
-        justify-content: space-between;
+      .order-info {
+        display: grid;
+        grid-template-columns: 140px 1fr 140px 100px;
+        gap: 1.5rem;
         align-items: center;
       }
 
-      .order-number {
-        font-weight: 700;
-        font-size: 1.1rem;
-        display: block;
-      }
-      .order-date {
-        font-size: 0.875rem;
+      .id-col .l {
+        font-size: 0.65rem;
+        font-weight: 800;
         color: var(--text-muted);
-      }
-
-      .status-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
         text-transform: uppercase;
       }
-
-      .status-badge.pending {
-        background: #fef3c7;
-        color: #d97706;
+      .id-col .v {
+        font-size: 1.1rem;
+        font-weight: 900;
+        color: var(--text);
       }
-      .status-badge.processing {
-        background: #dcfce7;
+
+      .meta-row {
+        display: flex;
+        gap: 2rem;
+      }
+      .m-col .l {
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        text-transform: uppercase;
+      }
+      .m-col .v {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .m-col .v.p {
+        color: var(--primary);
+        font-weight: 900;
+      }
+
+      .status-tag {
+        font-size: 0.65rem;
+        font-weight: 900;
+        padding: 0.3rem 0.75rem;
+        border-radius: 99px;
+        text-transform: uppercase;
+      }
+      .status-tag[data-status="Pending"] {
+        background: #fef9c3;
+        color: #a16207;
+      }
+      .status-tag[data-status="Completed"] {
+        background: #f0fdf4;
         color: #16a34a;
       }
-      .status-badge.completed {
-        background: #dbeafe;
-        color: #2563eb;
-      }
-      .status-badge.cancelled {
-        background: #fee2e2;
+      .status-tag[data-status="Cancelled"] {
+        background: #fef2f2;
         color: #dc2626;
       }
 
-      .order-body {
-        padding: 1.5rem;
+      .btn-detail {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        cursor: pointer;
+      }
+      .btn-detail:hover {
+        border-color: var(--primary);
+        color: var(--primary);
       }
 
-      .order-items {
-        margin-bottom: 1.5rem;
-      }
-
-      .order-item {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 0.5rem;
-        font-size: 0.95rem;
-      }
-
-      .item-qty {
-        font-weight: 600;
-        color: #3b82f6;
-        width: 30px;
-      }
-      .item-name {
-        flex: 1;
-      }
-      .item-price {
-        color: var(--text-muted);
-      }
-
-      .order-summary {
-        border-top: 1px dashed var(--border-color, #e2e8f0);
+      .order-expand {
+        margin-top: 1rem;
+        border-top: 1px dashed var(--border);
         padding-top: 1rem;
       }
-
-      .total-row {
+      .item-table {
         display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 1rem;
-        font-weight: 700;
+        flex-direction: column;
+        gap: 0.5rem;
       }
-
-      .total-price {
-        font-size: 1.25rem;
-        color: #3b82f6;
-      }
-
-      .order-actions {
-        padding: 1rem 1.5rem;
-        background: var(--bg-main, #f8fafc);
-        border-top: 1px solid var(--border-color, #e2e8f0);
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-      }
-
-      .track-btn {
-        background: #3b82f6;
-        color: white;
-        border: none;
-        padding: 0.5rem 1.5rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      .cancel-btn {
-        background: none;
-        border: 1px solid #ef4444;
-        color: #ef4444;
-        padding: 0.5rem 1.5rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        cursor: pointer;
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: 4rem;
-      }
-      .empty-icon {
-        font-size: 4rem;
-        margin-bottom: 1.5rem;
-      }
-      .shop-btn {
-        background: #3b82f6;
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        margin-top: 2rem;
-      }
-
-      /* Modal Styles */
-      .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        backdrop-filter: blur(4px);
-      }
-
-      .modal-content {
-        background: var(--bg-card, #ffffff);
-        padding: 2.5rem;
-        border-radius: 1.5rem;
-        max-width: 500px;
-        width: 90%;
-        text-align: center;
-      }
-
-      .modal-content h2 {
-        margin-bottom: 1rem;
-      }
-      .modal-content p {
+      .t-head {
+        display: grid;
+        grid-template-columns: 1fr 60px 100px;
+        font-size: 0.65rem;
+        font-weight: 900;
         color: var(--text-muted);
-        margin-bottom: 2rem;
-        line-height: 1.6;
+        text-transform: uppercase;
+        padding: 0 0.5rem;
       }
-
-      .modal-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
+      .t-row {
+        display: grid;
+        grid-template-columns: 1fr 60px 100px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text);
+        padding: 0.5rem;
+        border-bottom: 1px solid var(--border);
       }
-
-      .confirm-btn {
-        background: #ef4444;
-        color: white;
+      .t-row:last-child {
         border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        cursor: pointer;
       }
-      .close-btn {
-        background: none;
-        border: 1px solid var(--border-color);
-        color: var(--text-main);
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        cursor: pointer;
+      .t-row .n {
+        font-weight: 800;
+      }
+      .t-row .p {
+        font-weight: 800;
+        text-align: right;
+        color: var(--primary);
+      }
+      .t-row span:nth-child(2) {
+        text-align: center;
+      }
+
+      .no-orders {
+        padding: 4rem 2rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+      .no-orders .icon {
+        font-size: 3rem;
+        opacity: 0.1;
+      }
+
+      @media (max-width: 768px) {
+        .order-info {
+          grid-template-columns: 1fr 1fr;
+        }
+        .action-col {
+          grid-column: span 2;
+        }
       }
     `,
   ],
@@ -311,29 +294,20 @@ import { InventoryDataService, AuthStateService, Order } from "ui-shared";
 export class OrdersComponent {
   private inventoryService = inject(InventoryDataService);
   private authService = inject(AuthStateService);
+  expandedOrderId = signal<string | null>(null);
 
   userOrders = computed(() => {
     const userName = this.authService.user()?.name;
     if (!userName) return [];
     return this.inventoryService
       .orders()
-      .filter((o) => o.customer === userName)
-      .reverse();
+      .filter((o) => o.customer === userName);
   });
 
-  showCancelModal = signal(false);
-  selectedOrderId = signal("");
-
-  requestCancel(orderId: string) {
-    this.selectedOrderId.set(orderId);
-    this.showCancelModal.set(true);
-  }
-
-  confirmCancel() {
-    const id = this.selectedOrderId();
-    this.inventoryService.orders.update((orders) =>
-      orders.map((o) => (o.id === id ? { ...o, status: "Cancelled" } : o)),
-    );
-    this.showCancelModal.set(false);
+  pendingCount = computed(
+    () => this.userOrders().filter((o) => o.status === "Pending").length,
+  );
+  toggleDetails(id: string) {
+    this.expandedOrderId.set(this.expandedOrderId() === id ? null : id);
   }
 }

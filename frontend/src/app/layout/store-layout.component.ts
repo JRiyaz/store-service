@@ -1,5 +1,17 @@
-import { Component, inject } from "@angular/core";
-import { RouterOutlet, RouterLink, Router } from "@angular/router";
+import {
+  Component,
+  inject,
+  signal,
+  HostListener,
+  ElementRef,
+  ViewChild,
+} from "@angular/core";
+import {
+  RouterOutlet,
+  RouterLink,
+  RouterLinkActive,
+  Router,
+} from "@angular/router";
 import { CommonModule } from "@angular/common";
 import { AuthStateService, CartService, DarkModeService } from "ui-shared";
 import { StoreStateService } from "../services/store-state.service";
@@ -7,350 +19,597 @@ import { StoreStateService } from "../services/store-state.service";
 @Component({
   selector: "app-store-layout",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <div class="store-container" [class.dark]="darkModeService.isDarkMode()">
-      <nav class="store-navbar">
-        <div class="navbar-brand" routerLink="/store">
-          <span class="logo-icon">🛒</span>
-          <span class="logo-text">Industrial<span>Store</span></span>
-        </div>
-
-        <div class="navbar-search">
-          <input
-            type="text"
-            placeholder="Search products..."
-            (input)="onSearch($event)"
-          />
-          <span class="search-icon">🔍</span>
-        </div>
-
-        <div class="navbar-actions">
-          <button
-            class="action-btn theme-toggle"
-            (click)="darkModeService.toggle()"
-            [title]="
-              darkModeService.isDarkMode()
-                ? 'Switch to Light'
-                : 'Switch to Dark'
-            "
-          >
-            {{ darkModeService.isDarkMode() ? "☀️" : "🌙" }}
-          </button>
-
-          <div class="cart-wrapper" routerLink="/store/cart">
-            <button class="action-btn cart-btn">
-              <span>🛒</span>
-              <span class="badge" *ngIf="cartService.totalItems() > 0">{{
-                cartService.totalItems()
-              }}</span>
-            </button>
+    <div class="shopper-shell" [class.dark]="darkMode.isDarkMode()">
+      <!-- Shopper Header (Compact) -->
+      <header class="shopper-header" [class.scrolled]="isScrolled()">
+        <div class="header-container">
+          <!-- Logo -->
+          <div class="shopper-logo" routerLink="/store">
+            <span class="logo-text">SHOP<span>PER.</span></span>
           </div>
 
-          <ng-container *ngIf="authService.isLoggedIn(); else loginBtn">
-            <div class="user-profile" routerLink="/store/orders">
-              <img
-                [src]="authService.avatarUrl()"
-                alt="Avatar"
-                class="avatar"
-              />
-              <span class="user-name">{{ authService.user()?.name }}</span>
-            </div>
-            <button
-              class="action-btn logout-btn"
-              (click)="authService.logout()"
+          <!-- Nav Links -->
+          <nav class="shopper-nav">
+            <a
+              routerLink="/store"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              >Home</a
             >
-              Logout
+            <a
+              routerLink="/store"
+              [queryParams]="{ category: 'Electronics' }"
+              routerLinkActive="active"
+              >Electronics</a
+            >
+            <a
+              routerLink="/store"
+              [queryParams]="{ category: 'Office' }"
+              routerLinkActive="active"
+              >Office</a
+            >
+            <a routerLink="/store/orders" routerLinkActive="active">Orders</a>
+          </nav>
+
+          <!-- Utils -->
+          <div class="shopper-utils">
+            <button
+              class="util-btn"
+              (click)="$event.stopPropagation(); toggleSearch()"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
             </button>
-          </ng-container>
 
-          <ng-template #loginBtn>
-            <button class="login-btn" routerLink="/user/login">Login</button>
-          </ng-template>
+            <button class="util-btn" (click)="darkMode.toggle()">
+              <!-- Sun Icon -->
+              <svg
+                *ngIf="darkMode.isDarkMode()"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="21.78" x2="5.64" y2="20.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <!-- Moon Icon -->
+              <svg
+                *ngIf="!darkMode.isDarkMode()"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+                ></path>
+              </svg>
+            </button>
+
+            <div class="user-wrap" *ngIf="auth.isLoggedIn(); else loginBtn">
+              <div
+                class="user-trigger"
+                (click)="$event.stopPropagation(); toggleDropdown()"
+              >
+                <img [src]="auth.avatarUrl()" alt="Avatar" />
+              </div>
+              <div
+                class="user-menu animate-fade-in"
+                *ngIf="isDropdownOpen()"
+                (click)="$event.stopPropagation()"
+              >
+                <div class="menu-info">
+                  <p class="name">{{ auth.user()?.name }}</p>
+                  <p class="email">{{ auth.user()?.email }}</p>
+                </div>
+                <div class="divider"></div>
+                <a routerLink="/store/settings" (click)="closeDropdowns()"
+                  >Settings</a
+                >
+                <a routerLink="/store/orders" (click)="closeDropdowns()"
+                  >My Orders</a
+                >
+                <div class="divider"></div>
+                <button (click)="logout()" class="logout">Sign Out</button>
+              </div>
+            </div>
+
+            <ng-template #loginBtn>
+              <button class="util-btn" routerLink="/user/login">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </button>
+            </ng-template>
+
+            <div class="util-cart" routerLink="/store/cart">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path
+                  d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
+                ></path>
+              </svg>
+              <span class="badge" *ngIf="cart.totalItems() > 0">{{
+                cart.totalItems()
+              }}</span>
+            </div>
+          </div>
         </div>
-      </nav>
 
-      <main class="store-content">
-        <router-outlet />
+        <!-- Search Modal Popup -->
+        <div
+          class="search-overlay animate-fade-in"
+          *ngIf="isSearchOpen()"
+          (click)="isSearchOpen.set(false)"
+        >
+          <div class="search-modal" (click)="$event.stopPropagation()">
+            <div class="modal-head">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                #searchInput
+                type="text"
+                placeholder="Search for products..."
+                (input)="onSearch($event)"
+                autofocus
+              />
+              <button class="close-btn" (click)="isSearchOpen.set(false)">
+                ✕
+              </button>
+            </div>
+            <div class="modal-tips">
+              <span>Press <b>ESC</b> to close</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="shopper-main" (click)="closeDropdowns()">
+        <router-outlet></router-outlet>
       </main>
 
-      <footer class="store-footer">
-        <div class="footer-content">
-          <p>&copy; 2024 Industrial Core IMS. All rights reserved.</p>
-          <div class="footer-links">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Contact Us</a>
+      <footer class="shopper-footer">
+        <div class="footer-container">
+          <div class="f-brand">SHOP<span>PER.</span></div>
+          <div class="f-links">
+            <a routerLink="/store">Home</a>
+            <a routerLink="/store/orders">Orders</a>
+            <a href="#">Support</a>
           </div>
+          <div class="f-copy">© 2026 Store v1.5</div>
         </div>
       </footer>
     </div>
   `,
   styles: [
     `
-      :host {
-        display: block;
-        height: 100vh;
-      }
+      .shopper-shell {
+        --primary: #9333ea;
+        --bg: #ffffff;
+        --text: #111827;
+        --text-muted: #6b7280;
+        --border: #f3f4f6;
+        --surface: #ffffff;
+        --header-h: 60px;
+        --header-bg: rgba(255, 255, 255, 0.8);
 
-      .store-container {
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
-        background: #f8fafc;
-        color: #1e293b;
-        transition:
-          background 0.3s,
-          color 0.3s;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Inter", system-ui, sans-serif;
+        transition: all 0.2s ease;
       }
 
-      .store-container.dark {
-        background: var(--theme-dark-base, #060714);
-        color: #f1f5f9;
-        --bg-card: var(--theme-dark-surface, #0a0b21);
-        --border-color: rgba(255, 255, 255, 0.06);
-        --text-muted: #94a3b8;
+      .shopper-shell.dark {
+        --bg: #0b0f1a;
+        --text: #f9fafb;
+        --text-muted: #9ca3af;
+        --border: #1e293b;
+        --surface: #1e293b;
+        --header-bg: rgba(11, 15, 26, 0.8);
       }
 
-      .store-navbar {
+      /* Header (Compact) */
+      .shopper-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: var(--header-bg);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        height: var(--header-h);
+        display: flex;
+        align-items: center;
+        transition: all 0.2s;
+      }
+      .shopper-header.scrolled {
+        height: 52px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      }
+
+      .header-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+        width: 100%;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0.75rem 2rem;
-        background: var(--bg-card, #ffffff);
-        border-bottom: 1px solid var(--border-color, #e2e8f0);
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        backdrop-filter: blur(12px);
       }
 
-      .navbar-brand {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+      .shopper-logo {
         cursor: pointer;
-        font-size: 1.25rem;
+      }
+      .logo-text {
+        font-size: 1.1rem;
         font-weight: 900;
-        letter-spacing: -0.025em;
+        letter-spacing: -0.04em;
+        color: var(--text);
       }
-
       .logo-text span {
-        color: var(--theme-primary);
+        color: var(--primary);
       }
 
-      .navbar-search {
-        flex: 1;
-        max-width: 500px;
-        margin: 0 2rem;
-        position: relative;
+      .shopper-nav {
+        display: flex;
+        gap: 1.75rem;
+      }
+      .shopper-nav a {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+      .shopper-nav a:hover,
+      .shopper-nav a.active {
+        color: var(--primary);
       }
 
-      .navbar-search input {
-        width: 100%;
-        padding: 0.6rem 1rem 0.6rem 2.5rem;
-        border: 1px solid var(--border-color, #e2e8f0);
-        border-radius: 12px;
-        background: var(--bg-main, #f8fafc);
-        color: inherit;
-        outline: none;
-        transition: all 0.2s;
-      }
-
-      .store-container.dark .navbar-search input {
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .navbar-search input:focus {
-        border-color: var(--theme-primary);
-        box-shadow: 0 0 0 4px
-          color-mix(in srgb, var(--theme-primary), transparent 90%);
-      }
-
-      .search-icon {
-        position: absolute;
-        left: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-muted, #64748b);
-        font-size: 0.9rem;
-      }
-
-      .navbar-actions {
+      .shopper-utils {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 1.25rem;
       }
-
-      .action-btn {
+      .util-btn {
         background: none;
         border: none;
-        font-size: 1.1rem;
+        padding: 0;
+        color: var(--text);
         cursor: pointer;
-        color: inherit;
         display: flex;
         align-items: center;
-        justify-content: center;
-        padding: 0.6rem;
-        border-radius: 10px;
-        transition: all 0.2s;
+        transition: color 0.2s;
+      }
+      .util-btn:hover {
+        color: var(--primary);
       }
 
-      .action-btn:hover {
-        background: var(--bg-main, #f1f5f9);
-        color: var(--theme-primary);
-      }
-
-      .store-container.dark .action-btn:hover {
-        background: rgba(255, 255, 255, 0.05);
-      }
-
-      .cart-wrapper {
+      .util-cart {
         position: relative;
         cursor: pointer;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        transition: color 0.2s;
       }
-
+      .util-cart:hover {
+        color: var(--primary);
+      }
       .badge {
         position: absolute;
-        top: 0;
-        right: 0;
-        background: var(--theme-primary);
+        top: -6px;
+        right: -8px;
+        background: var(--primary);
         color: white;
-        font-size: 0.65rem;
-        min-width: 18px;
-        height: 18px;
+        font-size: 0.6rem;
+        font-weight: 900;
+        min-width: 15px;
+        height: 15px;
+        border-radius: 99px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 9999px;
-        font-weight: 800;
-        border: 2px solid var(--bg-card, #fff);
+        border: 2px solid var(--bg);
       }
 
-      .user-profile {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
+      .user-wrap {
+        position: relative;
+      }
+      .user-trigger {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        overflow: hidden;
         cursor: pointer;
-        padding: 0.4rem 0.75rem;
-        border-radius: 12px;
-        background: var(--bg-main, #f1f5f9);
-        border: 1px solid transparent;
-        transition: all 0.2s;
+        border: 1.5px solid var(--border);
       }
-
-      .store-container.dark .user-profile {
-        background: rgba(255, 255, 255, 0.03);
-      }
-
-      .user-profile:hover {
-        border-color: var(--theme-primary);
-      }
-
-      .avatar {
-        width: 28px;
-        height: 28px;
-        border-radius: 8px;
+      .user-trigger img {
+        width: 100%;
+        height: 100%;
         object-fit: cover;
       }
 
-      .user-name {
-        font-size: 0.85rem;
-        font-weight: 700;
-      }
-
-      .login-btn {
-        background: var(--theme-primary);
-        color: white;
-        border: none;
-        padding: 0.6rem 1.25rem;
+      .user-menu {
+        position: absolute;
+        top: calc(100% + 0.75rem);
+        right: 0;
+        width: 200px;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 10px;
+        padding: 0.5rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+      .menu-info {
+        padding: 0.5rem 0.75rem;
+      }
+      .menu-info .name {
         font-weight: 800;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.025em;
-        cursor: pointer;
-        transition: all 0.2s;
+        font-size: 0.8rem;
+        margin: 0;
       }
-
-      .login-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px
-          color-mix(in srgb, var(--theme-primary), transparent 70%);
+      .menu-info .email {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        margin: 0;
       }
-
-      .logout-btn {
-        font-size: 0.75rem;
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 0.4rem 0;
+      }
+      .user-menu a,
+      .logout {
+        display: block;
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
         font-weight: 700;
-        text-transform: uppercase;
+        color: var(--text);
+        text-decoration: none;
+        border-radius: 6px;
+        text-align: left;
+        background: none;
+        border: none;
+        cursor: pointer;
+      }
+      .user-menu a:hover {
+        background: var(--bg);
+        color: var(--primary);
+      }
+      .logout {
+        color: #ef4444;
+      }
+
+      /* Search Modal */
+      .search-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        display: flex;
+        justify-content: center;
+        padding-top: 10vh;
+      }
+      .search-modal {
+        width: 100%;
+        max-width: 600px;
+        background: var(--surface);
+        border-radius: 16px;
+        height: fit-content;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+      .modal-head {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        gap: 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .modal-head input {
+        flex: 1;
+        border: none;
+        background: none;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text);
+        outline: none;
+      }
+      .modal-head svg {
+        color: var(--text-muted);
+      }
+      .close-btn {
+        background: var(--bg);
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--text-muted);
+        cursor: pointer;
+      }
+      .modal-tips {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        background: var(--bg);
+      }
+      .modal-tips b {
+        color: var(--text);
+        padding: 0.1rem 0.3rem;
+        background: var(--border);
+        border-radius: 4px;
+      }
+
+      .shopper-main {
+        flex: 1;
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+        padding: 2rem 1.5rem;
+      }
+
+      /* Thin Minimal Footer */
+      .shopper-footer {
+        padding: 1.25rem 1.5rem;
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+      }
+      .footer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .f-brand {
+        font-size: 0.8rem;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+      }
+      .f-brand span {
+        color: var(--primary);
+      }
+      .f-links {
+        display: flex;
+        gap: 1.5rem;
+      }
+      .f-links a {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.1s;
+      }
+      .f-links a:hover {
+        color: var(--primary);
+      }
+      .f-copy {
+        font-size: 0.7rem;
+        font-weight: 600;
         color: var(--text-muted);
       }
 
-      .store-content {
-        flex: 1;
-        padding: 2rem;
-        max-width: 1400px;
-        margin: 0 auto;
-        width: 100%;
-      }
-
-      .store-footer {
-        background: var(--bg-card, #ffffff);
-        border-top: 1px solid var(--border-color, #e2e8f0);
-        padding: 3rem 2rem;
-        margin-top: auto;
-      }
-
-      .footer-content {
-        max-width: 1400px;
-        margin: 0 auto;
-        display: flex;
-        flex-direction: column;
-        gap: 2rem;
-        align-items: center;
-        color: var(--text-muted, #64748b);
-        font-size: 0.85rem;
-      }
-
-      .footer-links {
-        display: flex;
-        gap: 2rem;
-      }
-
-      .footer-links a {
-        color: inherit;
-        text-decoration: none;
-        font-weight: 600;
-        transition: color 0.2s;
-      }
-
-      .footer-links a:hover {
-        color: var(--theme-primary);
-      }
-
       @media (max-width: 768px) {
-        .navbar-search {
+        .shopper-nav,
+        .f-links {
           display: none;
-        }
-        .store-navbar {
-          padding: 0.75rem 1rem;
-        }
-        .user-name {
-          display: none;
-        }
-        .footer-content {
-          text-align: center;
         }
       }
     `,
   ],
 })
 export class StoreLayoutComponent {
-  authService = inject(AuthStateService);
-  cartService = inject(CartService);
-  darkModeService = inject(DarkModeService);
+  auth = inject(AuthStateService);
+  cart = inject(CartService);
+  darkMode = inject(DarkModeService);
   private storeState = inject(StoreStateService);
   private router = inject(Router);
+
+  isDropdownOpen = signal(false);
+  isSearchOpen = signal(false);
+  isScrolled = signal(false);
+
+  @ViewChild("searchInput") searchInput!: ElementRef;
+
+  @HostListener("window:scroll")
+  onScroll() {
+    this.isScrolled.set(window.scrollY > 15);
+  }
+
+  @HostListener("window:keydown.esc")
+  onEsc() {
+    this.isSearchOpen.set(false);
+  }
+
+  toggleDropdown() {
+    this.isDropdownOpen.update((v) => !v);
+  }
+
+  toggleSearch() {
+    this.isSearchOpen.update((v) => !v);
+    if (this.isSearchOpen()) {
+      setTimeout(() => this.searchInput?.nativeElement.focus(), 100);
+    }
+  }
+
+  closeDropdowns() {
+    this.isDropdownOpen.set(false);
+  }
+
+  logout() {
+    this.auth.logout();
+    this.isDropdownOpen.set(false);
+    this.router.navigate(["/store"]);
+  }
 
   onSearch(event: Event) {
     const query = (event.target as HTMLInputElement).value;

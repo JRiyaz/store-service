@@ -41,6 +41,13 @@ export const STORE_ROUTES: Routes = [
             (m) => m.OrdersComponent,
           ),
       },
+      {
+        path: "settings",
+        loadComponent: () =>
+          import("./features/store/settings.component").then(
+            (m) => m.SettingsComponent,
+          ),
+      },
     ],
   },
 ];

@@ -8,19 +8,30 @@ import { CartService, CartItem } from "ui-shared";
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="cart-container">
-      <h1>Your Shopping Cart</h1>
+    <div class="shopper-cart-page animate-fade-in">
+      <header class="cart-head">
+        <h1>Your Cart</h1>
+        <p *ngIf="cartService.items().length > 0">
+          You have {{ cartService.items().length }} items in your basket.
+        </p>
+      </header>
 
       <div
-        class="cart-layout"
+        class="cart-grid"
         *ngIf="cartService.items().length > 0; else emptyCart"
       >
-        <div class="cart-items">
+        <!-- List -->
+        <div class="cart-list">
           <div class="cart-item" *ngFor="let item of cartService.items()">
-            <div class="item-image">📦</div>
-            <div class="item-details">
-              <h3>{{ item.name }}</h3>
-              <p class="category">{{ item.category }}</p>
+            <div class="item-visual" [routerLink]="['/store/product', item.id]">
+              <span>📦</span>
+            </div>
+
+            <div class="item-info">
+              <span class="cat">{{ item.category }}</span>
+              <h3 [routerLink]="['/store/product', item.id]">
+                {{ item.name }}
+              </h3>
               <button
                 class="remove-btn"
                 (click)="cartService.removeFromCart(item.id)"
@@ -28,16 +39,17 @@ import { CartService, CartItem } from "ui-shared";
                 Remove
               </button>
             </div>
-            <div class="item-quantity">
-              <div class="qty-controls">
+
+            <div class="item-qty">
+              <div class="mini-stepper">
                 <button
                   (click)="
                     cartService.updateQuantity(item.id, item.quantity - 1)
                   "
                 >
-                  -
+                  −
                 </button>
-                <span>{{ item.quantity }}</span>
+                <span class="val">{{ item.quantity }}</span>
                 <button
                   (click)="
                     cartService.updateQuantity(item.id, item.quantity + 1)
@@ -47,252 +59,304 @@ import { CartService, CartItem } from "ui-shared";
                 </button>
               </div>
             </div>
+
             <div class="item-price">
-              {{ item.price * item.quantity | currency }}
+              <span class="total">{{
+                item.price * item.quantity | currency
+              }}</span>
+              <span class="unit">{{ item.price | currency }} / ea</span>
             </div>
           </div>
         </div>
 
-        <div class="cart-summary">
-          <h2>Order Summary</h2>
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <span>{{ cartService.subtotal() | currency }}</span>
+        <!-- Sidebar -->
+        <aside class="cart-sidebar">
+          <div class="summary-box shopper-card">
+            <h3>Order Summary</h3>
+            <div class="summary-rows">
+              <div class="s-row">
+                <span>Subtotal</span
+                ><span>{{ cartService.subtotal() | currency }}</span>
+              </div>
+              <div class="s-row">
+                <span>Tax</span><span>{{ cartService.tax() | currency }}</span>
+              </div>
+              <div class="s-row">
+                <span>Shipping</span><span class="free">FREE</span>
+              </div>
+              <div class="divider"></div>
+              <div class="s-row total">
+                <span>Total</span
+                ><span class="v">{{ cartService.total() | currency }}</span>
+              </div>
+            </div>
+            <button class="btn-checkout" routerLink="/store/checkout">
+              Proceed to Checkout
+            </button>
+            <div class="summary-links">
+              <a routerLink="/store">Continue Shopping</a>
+            </div>
           </div>
-          <div class="summary-row">
-            <span>Tax (15%)</span>
-            <span>{{ cartService.tax() | currency }}</span>
-          </div>
-          <div class="summary-row total">
-            <span>Total</span>
-            <span>{{ cartService.total() | currency }}</span>
-          </div>
-          <button class="checkout-btn" routerLink="/store/checkout">
-            Proceed to Checkout
-          </button>
-          <p class="shipping-note">
-            Free shipping on all industrial orders over $500.
-          </p>
-        </div>
+        </aside>
       </div>
 
       <ng-template #emptyCart>
-        <div class="empty-state">
-          <div class="empty-icon">🛒</div>
+        <div class="cart-empty shopper-card">
+          <div class="icon">🛒</div>
           <h2>Your cart is empty</h2>
-          <p>Browse our products and add something to your cart!</p>
-          <button class="shop-btn" routerLink="/store">Start Shopping</button>
+          <p>Ready to start shopping? Explore our latest arrivals.</p>
+          <button class="btn-checkout !w-auto !px-10" routerLink="/store">
+            Browse Products
+          </button>
         </div>
       </ng-template>
     </div>
   `,
   styles: [
     `
-      .cart-container {
-        max-width: 1200px;
+      .shopper-cart-page {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        max-width: 1000px;
         margin: 0 auto;
       }
 
-      h1 {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 2rem;
+      .cart-head h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin: 0;
+        color: var(--text);
+        letter-spacing: -0.02em;
+      }
+      .cart-head p {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 0.25rem;
       }
 
-      .cart-layout {
+      .cart-grid {
         display: grid;
-        grid-template-columns: 1fr 350px;
-        gap: 2rem;
+        grid-template-columns: 1fr 320px;
+        gap: 3rem;
+        align-items: start;
       }
 
-      .cart-items {
+      .cart-list {
         display: flex;
         flex-direction: column;
         gap: 1rem;
       }
-
       .cart-item {
         display: grid;
-        grid-template-columns: 80px 1fr auto 120px;
+        grid-template-columns: 80px 1fr 140px 140px;
         gap: 1.5rem;
-        padding: 1.5rem;
-        background: var(--bg-card, #ffffff);
+        padding: 1rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 1rem;
-        border: 1px solid var(--border-color, #e2e8f0);
         align-items: center;
       }
 
-      .item-image {
-        width: 80px;
+      .item-visual {
         height: 80px;
-        background: #f1f5f9;
-        border-radius: 0.5rem;
+        width: 80px;
+        background: var(--bg);
+        border-radius: 0.75rem;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 2rem;
+        cursor: pointer;
       }
 
-      .item-details h3 {
-        font-size: 1.125rem;
-        margin-bottom: 0.25rem;
+      .item-info .cat {
+        font-size: 0.7rem;
+        font-weight: 800;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
       }
-
-      .category {
-        font-size: 0.875rem;
-        color: var(--text-muted);
-        margin-bottom: 0.5rem;
+      .item-info h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        margin: 0.1rem 0;
+        cursor: pointer;
+        color: var(--text);
+        transition: color 0.1s;
       }
-
+      .item-info h3:hover {
+        color: var(--primary);
+      }
       .remove-btn {
         background: none;
         border: none;
         color: #ef4444;
-        font-size: 0.875rem;
-        font-weight: 500;
+        font-size: 0.75rem;
+        font-weight: 700;
         cursor: pointer;
-        padding: 0;
+        padding: 0.25rem 0 0;
+        text-align: left;
       }
 
-      .qty-controls {
+      .mini-stepper {
         display: flex;
         align-items: center;
-        border: 1px solid var(--border-color, #e2e8f0);
-        border-radius: 0.5rem;
-        overflow: hidden;
+        background: var(--bg);
+        border: 1.5px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 0.15rem;
       }
-
-      .qty-controls button {
-        padding: 0.25rem 0.75rem;
-        background: none;
+      .mini-stepper button {
+        width: 30px;
+        height: 30px;
         border: none;
-        color: var(--text-main);
+        background: var(--surface);
+        color: var(--text);
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 800;
         cursor: pointer;
       }
-
-      .qty-controls button:hover {
-        background: var(--bg-main);
+      .mini-stepper button:hover {
+        background: var(--primary);
+        color: white;
       }
-
-      .qty-controls span {
-        padding: 0 0.75rem;
-        font-weight: 600;
-        min-width: 40px;
+      .mini-stepper .val {
+        flex: 1;
         text-align: center;
+        font-size: 0.9rem;
+        font-weight: 800;
+        min-width: 35px;
       }
 
       .item-price {
         text-align: right;
-        font-weight: 700;
-        font-size: 1.125rem;
+      }
+      .item-price .unit {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 600;
+        display: block;
+      }
+      .item-price .total {
+        font-size: 1.15rem;
+        font-weight: 900;
+        color: var(--text);
       }
 
-      .cart-summary {
-        background: var(--bg-card, #ffffff);
-        border-radius: 1rem;
-        border: 1px solid var(--border-color, #e2e8f0);
-        padding: 2rem;
-        height: fit-content;
+      .shopper-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.02);
+      }
+      .cart-sidebar {
         position: sticky;
         top: 100px;
       }
+      .summary-box h3 {
+        font-size: 1rem;
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        color: var(--text);
+      }
 
-      .cart-summary h2 {
-        font-size: 1.25rem;
+      .summary-rows {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
         margin-bottom: 1.5rem;
       }
-
-      .summary-row {
+      .s-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 1rem;
+        font-size: 0.85rem;
+        font-weight: 600;
         color: var(--text-muted);
       }
-
-      .summary-row.total {
-        border-top: 1px solid var(--border-color, #e2e8f0);
-        padding-top: 1rem;
-        margin-top: 1rem;
-        color: var(--text-main);
-        font-weight: 700;
-        font-size: 1.25rem;
+      .s-row .free {
+        color: #10b981;
+        font-weight: 800;
+      }
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 0.25rem 0;
+      }
+      .s-row.total {
+        color: var(--text);
+      }
+      .s-row.total .v {
+        font-size: 1.75rem;
+        font-weight: 900;
+        color: var(--primary);
+        letter-spacing: -0.02em;
       }
 
-      .checkout-btn {
+      .btn-checkout {
         width: 100%;
-        background: #3b82f6;
+        background: var(--primary);
         color: white;
         border: none;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        font-size: 1rem;
-        margin-top: 1.5rem;
+        padding: 0.85rem;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-weight: 800;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all 0.2s;
+      }
+      .btn-checkout:hover {
+        transform: translateY(-1px);
       }
 
-      .checkout-btn:hover {
-        background: #2563eb;
-      }
-
-      .shipping-note {
-        font-size: 0.75rem;
-        color: var(--text-muted);
-        text-align: center;
+      .summary-links {
         margin-top: 1rem;
-      }
-
-      .empty-state {
         text-align: center;
-        padding: 4rem 0;
+      }
+      .summary-links a {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
       }
 
-      .empty-icon {
+      .cart-empty {
+        padding: 5rem 2rem;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      .cart-empty .icon {
         font-size: 4rem;
-        margin-bottom: 1rem;
+        opacity: 0.15;
+      }
+      .cart-empty h2 {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin: 0;
+      }
+      .cart-empty p {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        margin: 0;
       }
 
-      .shop-btn {
-        background: #3b82f6;
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        margin-top: 2rem;
-        cursor: pointer;
-      }
-
-      @media (max-width: 992px) {
-        .cart-layout {
+      @media (max-width: 900px) {
+        .cart-grid {
           grid-template-columns: 1fr;
         }
-        .cart-summary {
-          position: static;
+        .cart-sidebar {
+          width: 100%;
         }
-      }
-
-      @media (max-width: 640px) {
         .cart-item {
-          grid-template-columns: 60px 1fr;
-          grid-template-areas:
-            "img details"
-            "img qty"
-            "img price";
+          grid-template-columns: 1fr 1fr;
         }
-        .item-image {
-          grid-area: img;
-        }
-        .item-details {
-          grid-area: details;
-        }
-        .item-quantity {
-          grid-area: qty;
-        }
-        .item-price {
-          grid-area: price;
-          text-align: left;
+        .item-visual {
+          display: none;
         }
       }
     `,
