@@ -2,7 +2,8 @@ import { Component, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
 import { WishlistService } from "../../services/wishlist.service";
-import { CartService, Product } from "ui-shared";
+import { Product } from "ui-shared";
+import { CartService } from "../../services/cart.service";
 
 @Component({
   selector: "app-wishlist",

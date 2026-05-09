@@ -1,8 +1,9 @@
 import { Component, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
-import { InventoryDataService, CartService, Product } from "ui-shared";
+import { InventoryDataService, Product } from "ui-shared";
 import { WishlistService } from "../../services/wishlist.service";
+import { CartService } from "../../services/cart.service";
 
 @Component({
   selector: "app-store-home",

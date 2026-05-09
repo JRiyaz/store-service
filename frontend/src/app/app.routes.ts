@@ -28,6 +28,13 @@ export const STORE_ROUTES: Routes = [
           ),
       },
       {
+        path: "search",
+        loadComponent: () =>
+          import("./features/store/search-results.component").then(
+            (m) => m.SearchResultsComponent,
+          ),
+      },
+      {
         path: "product/:id",
         loadComponent: () =>
           import("./features/store/product-detail.component").then(

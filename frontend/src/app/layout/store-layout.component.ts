@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   HostListener,
   ElementRef,
   ViewChild,
@@ -13,14 +14,29 @@ import {
   Router,
 } from "@angular/router";
 import { CommonModule } from "@angular/common";
-import { AuthStateService, CartService, DarkModeService } from "ui-shared";
+import {
+  AuthStateService,
+  DarkModeService,
+  MobileBottomNavComponent,
+  NotificationService,
+} from "ui-shared";
 import { StoreStateService } from "../services/store-state.service";
 import { WishlistService } from "../services/wishlist.service";
+import { CartService } from "../services/cart.service";
+import { CartUiService } from "../services/cart-ui.service";
+import { CartDrawerComponent } from "../shared/components/cart-drawer/cart-drawer.component";
 
 @Component({
   selector: "app-store-layout",
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [
+    CommonModule,
+    RouterOutlet,
+    RouterLink,
+    RouterLinkActive,
+    MobileBottomNavComponent,
+    CartDrawerComponent,
+  ],
   template: `
     <div class="shopper-shell" [class.dark]="darkMode.isDarkMode()">
       <!-- Shopper Header (Compact) -->
@@ -128,7 +144,7 @@ import { WishlistService } from "../services/wishlist.service";
               }}</span>
             </div>
 
-            <div class="util-cart" routerLink="/store/cart">
+            <div class="util-cart" (click)="cartUi.open()">
               <svg
                 width="18"
                 height="18"
@@ -175,6 +191,10 @@ import { WishlistService } from "../services/wishlist.service";
                 >
                 <a routerLink="/store/orders" (click)="closeDropdowns()"
                   >My Orders</a
+                >
+                <div class="divider"></div>
+                <a routerLink="/inventory" (click)="closeDropdowns()"
+                  >Inventory Hub</a
                 >
                 <div class="divider"></div>
                 <button (click)="logout()" class="logout">Sign Out</button>
@@ -255,6 +275,12 @@ import { WishlistService } from "../services/wishlist.service";
           <div class="f-copy">© 2026 Store v1.5</div>
         </div>
       </footer>
+
+      <!-- Mobile Bottom Nav -->
+      <ui-mobile-bottom-nav [navItems]="navItems()"></ui-mobile-bottom-nav>
+
+      <!-- Cart Drawer -->
+      <ui-cart-drawer></ui-cart-drawer>
     </div>
   `,
   styles: [
@@ -581,6 +607,9 @@ import { WishlistService } from "../services/wishlist.service";
         .f-links {
           display: none;
         }
+        .shopper-main {
+          padding-bottom: 80px;
+        }
       }
     `,
   ],
@@ -590,8 +619,34 @@ export class StoreLayoutComponent {
   cart = inject(CartService);
   darkMode = inject(DarkModeService);
   wishlist = inject(WishlistService);
+  cartUi = inject(CartUiService);
   private storeState = inject(StoreStateService);
   private router = inject(Router);
+
+  navItems = computed(() => [
+    {
+      label: "Home",
+      link: "/store",
+      exact: true,
+      icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>`,
+    },
+    {
+      label: "Shop",
+      link: "/store/categories",
+      icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>`,
+    },
+    {
+      label: "Cart",
+      link: "/store/cart",
+      badge: this.cart.totalItems(),
+      icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>`,
+    },
+    {
+      label: "Profile",
+      link: "/user/settings",
+      icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`,
+    },
+  ]);
 
   isDropdownOpen = signal(false);
   isSearchOpen = signal(false);
@@ -633,11 +688,8 @@ export class StoreLayoutComponent {
   onSearch(event: Event) {
     const query = (event.target as HTMLInputElement).value;
     this.storeState.setSearchQuery(query);
-    if (
-      this.router.url !== "/store" &&
-      !this.router.url.startsWith("/store?")
-    ) {
-      this.router.navigate(["/store"]);
+    if (this.router.url !== "/store/search") {
+      this.router.navigate(["/store/search"]);
     }
   }
 }

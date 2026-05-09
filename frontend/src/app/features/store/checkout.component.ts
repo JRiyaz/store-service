@@ -8,12 +8,12 @@ import {
   ReactiveFormsModule,
 } from "@angular/forms";
 import {
-  CartService,
   AuthStateService,
   InventoryDataService,
   Order,
   NotificationService,
 } from "ui-shared";
+import { CartService } from "../../services/cart.service";
 
 @Component({
   selector: "app-checkout",

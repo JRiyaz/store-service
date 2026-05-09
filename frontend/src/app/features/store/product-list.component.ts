@@ -7,9 +7,10 @@ import {
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { Router, ActivatedRoute, RouterLink } from "@angular/router";
-import { InventoryDataService, CartService, Product, Offer } from "ui-shared";
+import { InventoryDataService, Product, Offer } from "ui-shared";
 import { StoreStateService } from "../../services/store-state.service";
 import { WishlistService } from "../../services/wishlist.service";
+import { CartService } from "../../services/cart.service";
 
 @Component({
   selector: "app-product-list",
@@ -61,6 +62,62 @@ import { WishlistService } from "../../services/wishlist.service";
           </div>
         </div>
       </aside>
+
+      <!-- Mobile Filter Drawer -->
+      <div class="mobile-filter-drawer" [class.open]="isMobileFilterOpen()">
+        <div
+          class="drawer-backdrop"
+          (click)="isMobileFilterOpen.set(false)"
+        ></div>
+        <div class="drawer-content animate-slide-up">
+          <div class="drawer-header">
+            <h3>Filters</h3>
+            <button (click)="isMobileFilterOpen.set(false)">✕</button>
+          </div>
+          <div class="drawer-body">
+            <!-- Reuse sidebar sections or similar -->
+            <div class="sidebar-section">
+              <h3>Categories</h3>
+              <ul class="cat-list">
+                <li
+                  [class.active]="!storeState.selectedCategory()"
+                  (click)="selectCategory(null); isMobileFilterOpen.set(false)"
+                >
+                  All <span>{{ inventoryService.products().length }}</span>
+                </li>
+                <li
+                  *ngFor="let cat of categories()"
+                  [class.active]="storeState.selectedCategory() === cat"
+                  (click)="selectCategory(cat); isMobileFilterOpen.set(false)"
+                >
+                  {{ cat }} <span>{{ getCategoryCount(cat) }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating Filter FAB (Mobile Only) -->
+      <button
+        class="filter-fab sm:hidden"
+        (click)="isMobileFilterOpen.set(true)"
+      >
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+            d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+          ></path>
+        </svg>
+        <span>Filters</span>
+      </button>
 
       <!-- Main Content -->
       <div class="shopper-content">
@@ -752,10 +809,93 @@ import { WishlistService } from "../../services/wishlist.service";
       @media (max-width: 900px) {
         .shopper-products-page {
           grid-template-columns: 1fr;
+          padding-right: 1.5rem;
         }
         .shopper-sidebar {
           display: none;
         }
+      }
+
+      /* Mobile Drawer Styles */
+      .mobile-filter-drawer {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .mobile-filter-drawer.open {
+        visibility: visible;
+        pointer-events: auto;
+      }
+      .drawer-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .mobile-filter-drawer.open .drawer-backdrop {
+        opacity: 1;
+      }
+      .drawer-content {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--surface);
+        border-top-left-radius: 2rem;
+        border-top-right-radius: 2rem;
+        padding: 2rem;
+        transform: translateY(100%);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .mobile-filter-drawer.open .drawer-content {
+        transform: translateY(0);
+      }
+      .drawer-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      .drawer-header h3 {
+        font-size: 1.25rem;
+        font-weight: 900;
+        margin: 0;
+      }
+      .drawer-header button {
+        background: var(--bg);
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .filter-fab {
+        position: fixed;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--text);
+        color: var(--bg);
+        border: none;
+        padding: 0.8rem 1.5rem;
+        border-radius: 99px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 800;
+        font-size: 0.85rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        z-index: 900;
+        transition: all 0.2s;
+      }
+      .filter-fab:active {
+        transform: translateX(-50%) scale(0.95);
       }
     `,
   ],
@@ -770,6 +910,7 @@ export class ProductListComponent {
   activeOfferIndex = signal(0);
   visibleCount = signal(12);
   isLoadingMore = signal(false);
+  isMobileFilterOpen = signal(false);
 
   private router = inject(Router);
   private route = inject(ActivatedRoute);
