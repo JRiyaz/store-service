@@ -6,9 +6,10 @@ import {
   HostListener,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { RouterLink } from "@angular/router";
-import { InventoryDataService, CartService, Product } from "ui-shared";
+import { Router, ActivatedRoute, RouterLink } from "@angular/router";
+import { InventoryDataService, CartService, Product, Offer } from "ui-shared";
 import { StoreStateService } from "../../services/store-state.service";
+import { WishlistService } from "../../services/wishlist.service";
 
 @Component({
   selector: "app-product-list",
@@ -66,7 +67,13 @@ import { StoreStateService } from "../../services/store-state.service";
         <!-- Compact Header -->
         <header class="content-header">
           <div class="h-left">
-            <h1>{{ storeState.selectedCategory() || "Store" }}</h1>
+            <h1>
+              {{
+                storeState.showOffersOnly()
+                  ? "Current Offers"
+                  : storeState.selectedCategory() || "All Products"
+              }}
+            </h1>
             <p class="results-count">
               {{ filteredProducts().length }} items found
             </p>
@@ -96,7 +103,11 @@ import { StoreStateService } from "../../services/store-state.service";
 
         <!-- Tight Grid (3-4 columns) -->
         <div class="shopper-grid">
-          <div class="product-card" *ngFor="let product of filteredProducts()">
+          <div
+            class="product-card animate-item-in"
+            *ngFor="let product of visibleProducts(); let i = index"
+            [style.animation-delay]="(i % 4) * 0.1 + 's'"
+          >
             <div
               class="card-visual"
               [routerLink]="['/store/product', product.id]"
@@ -105,6 +116,32 @@ import { StoreStateService } from "../../services/store-state.service";
                 <span class="icon">📦</span>
               </div>
               <div class="card-badge" *ngIf="product.stock < 10">Low</div>
+              <div class="offer-tag" *ngIf="getProductOffer(product.id)">
+                Sale
+              </div>
+
+              <button
+                class="heart-btn"
+                [class.active]="wishlist.isInWishlist(product.id)"
+                (click)="
+                  $event.stopPropagation(); wishlist.toggleWishlist(product)
+                "
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                  ></path>
+                </svg>
+              </button>
 
               <!-- Compact Hover Actions -->
               <div class="card-hover-actions">
@@ -147,6 +184,19 @@ import { StoreStateService } from "../../services/store-state.service";
           </div>
         </div>
 
+        <div class="load-more-section" *ngIf="hasMoreProducts()">
+          <button
+            class="btn-load-more"
+            (click)="loadMore()"
+            [class.loading]="isLoadingMore()"
+          >
+            <span class="label" *ngIf="!isLoadingMore()"
+              >Load More Products</span
+            >
+            <span class="loader" *ngIf="isLoadingMore()"></span>
+          </button>
+        </div>
+
         <div class="catalog-empty" *ngIf="filteredProducts().length === 0">
           <div class="empty-icon">🔎</div>
           <h2>No items</h2>
@@ -163,6 +213,7 @@ import { StoreStateService } from "../../services/store-state.service";
         display: grid;
         grid-template-columns: 210px 1fr;
         gap: 3rem;
+        padding-right: 2.5rem;
         align-items: start;
       }
 
@@ -276,12 +327,16 @@ import { StoreStateService } from "../../services/store-state.service";
       .sort-btn {
         background: none;
         border: 1px solid var(--border);
-        padding: 0.4rem 0.75rem;
+        padding: 0.4rem 1.25rem;
+        min-width: 160px;
         border-radius: 8px;
         font-size: 0.8rem;
         font-weight: 700;
         color: var(--text);
         cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
       }
       .sort-btn span {
         color: var(--primary);
@@ -310,6 +365,155 @@ import { StoreStateService } from "../../services/store-state.service";
       .option:hover {
         background: var(--bg);
         color: var(--primary);
+      }
+
+      /* Carousel Styling */
+      .offers-carousel {
+        position: relative;
+        height: 260px;
+        background: var(--surface);
+        border-radius: 1.5rem;
+        overflow: hidden;
+        margin-bottom: 3rem;
+      }
+      .carousel-track {
+        display: flex;
+        height: 100%;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .offer-slide {
+        min-width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 4rem;
+        color: white;
+        position: relative;
+      }
+      .offer-info {
+        max-width: 50%;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        position: relative;
+        z-index: 2;
+      }
+      .offer-badge {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px);
+        padding: 0.4rem 1rem;
+        border-radius: 99px;
+        font-size: 0.75rem;
+        font-weight: 900;
+        width: fit-content;
+      }
+      .offer-info h2 {
+        font-size: 2rem;
+        font-weight: 900;
+        margin: 0;
+        letter-spacing: -0.03em;
+      }
+      .offer-info p {
+        font-size: 0.95rem;
+        opacity: 0.9;
+        line-height: 1.5;
+        margin: 0;
+      }
+      .btn-shop-offer {
+        background: white;
+        color: #111827;
+        border: none;
+        padding: 0.85rem 1.75rem;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 0.9rem;
+        cursor: pointer;
+        width: fit-content;
+        margin-top: 0.5rem;
+        transition: transform 0.2s;
+      }
+      .btn-shop-offer:hover {
+        transform: scale(1.05);
+      }
+      .offer-visual {
+        font-size: 8rem;
+        opacity: 0.15;
+        position: absolute;
+        right: 2rem;
+        transform: rotate(15deg);
+      }
+
+      .carousel-dots {
+        position: absolute;
+        bottom: 1.5rem;
+        right: 4rem;
+        display: flex;
+        gap: 0.5rem;
+        z-index: 5;
+      }
+      .carousel-dots span {
+        width: 8px;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .carousel-dots span.active {
+        background: white;
+        width: 24px;
+        border-radius: 4px;
+      }
+
+      /* Tags & Wishlist */
+      .offer-tag {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        background: var(--primary);
+        color: white;
+        font-size: 0.6rem;
+        font-weight: 900;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        text-transform: uppercase;
+      }
+      .heart-btn {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 34px;
+        height: 34px;
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        cursor: pointer;
+        transition: all 0.2s;
+        opacity: 0;
+        transform: translateY(-5px);
+        z-index: 10;
+      }
+      .product-card:hover .heart-btn {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .heart-btn:hover,
+      .heart-btn.active {
+        color: #ef4444;
+      }
+      .heart-btn.active {
+        opacity: 1;
+        transform: translateY(0);
+        fill: #ef4444;
+        stroke: #ef4444;
+      }
+      .offer-tag + .heart-btn {
+        top: 2.75rem;
       }
 
       /* Tight Grid (Smaller Cards) */
@@ -470,32 +674,71 @@ import { StoreStateService } from "../../services/store-state.service";
         color: var(--text);
       }
 
-      .mini-stepper {
-        display: flex;
-        align-items: center;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        border-radius: 99px;
-        padding: 0.15rem;
-      }
-      .mini-stepper button {
-        width: 24px;
-        height: 24px;
-        border: none;
-        background: var(--surface);
-        color: var(--text);
-        border-radius: 50%;
-        font-weight: 800;
-        cursor: pointer;
-      }
-      .mini-stepper button:hover {
-        background: var(--primary);
-        color: white;
-      }
       .mini-stepper .qty {
         padding: 0 0.5rem;
         font-size: 0.8rem;
         font-weight: 800;
+      }
+
+      /* Load More Section */
+      .load-more-section {
+        display: flex;
+        justify-content: center;
+        margin-top: 4rem;
+      }
+      .btn-load-more {
+        position: relative;
+        padding: 1rem 3rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 15px;
+        font-weight: 800;
+        color: var(--text);
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      .btn-load-more:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(109, 116, 255, 0.1);
+      }
+      .btn-load-more.loading {
+        pointer-events: none;
+        padding: 1rem;
+        width: 50px;
+        border-radius: 50%;
+        border-color: var(--primary);
+      }
+      .loader {
+        display: block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid var(--border);
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .animate-item-in {
+        animation: itemIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        opacity: 0;
+      }
+      @keyframes itemIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       /* Empty */
@@ -521,12 +764,33 @@ export class ProductListComponent {
   protected inventoryService = inject(InventoryDataService);
   private cartService = inject(CartService);
   protected storeState = inject(StoreStateService);
+  wishlist = inject(WishlistService);
 
   isSortOpen = signal(false);
+  activeOfferIndex = signal(0);
+  visibleCount = signal(12);
+  isLoadingMore = signal(false);
+
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  constructor() {
+    this.route.url.subscribe(() => this.updateOffersState());
+    this.route.queryParams.subscribe((params) => {
+      if (params["category"]) {
+        this.storeState.setCategory(params["category"]);
+      }
+    });
+  }
 
   @HostListener("document:click")
   closeDropdowns() {
     this.isSortOpen.set(false);
+  }
+
+  private updateOffersState() {
+    const isOffers = this.router.url.includes("/offers");
+    this.storeState.setShowOffersOnly(isOffers);
   }
 
   toggleSort() {
@@ -561,6 +825,14 @@ export class ProductListComponent {
       prods = prods.filter((p) => p.category === category);
     }
 
+    if (this.storeState.showOffersOnly()) {
+      prods = prods.filter(
+        (p) =>
+          (p.discount || 0) > 0 ||
+          this.inventoryService.offers().some((o) => o.productId === p.id),
+      );
+    }
+
     prods.sort((a, b) => {
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;
@@ -569,6 +841,22 @@ export class ProductListComponent {
 
     return prods;
   });
+
+  visibleProducts = computed(() => {
+    return this.filteredProducts().slice(0, this.visibleCount());
+  });
+
+  hasMoreProducts = computed(() => {
+    return this.visibleCount() < this.filteredProducts().length;
+  });
+
+  loadMore() {
+    this.isLoadingMore.set(true);
+    setTimeout(() => {
+      this.visibleCount.update((n) => n + 12);
+      this.isLoadingMore.set(false);
+    }, 800);
+  }
 
   getSortLabel() {
     const sort = this.storeState.sortBy();
@@ -601,5 +889,11 @@ export class ProductListComponent {
 
   updateQty(productId: number, qty: number) {
     this.cartService.updateQuantity(productId, qty);
+  }
+
+  getProductOffer(productId: number) {
+    return this.inventoryService
+      .offers()
+      .find((o) => o.productId === productId);
   }
 }

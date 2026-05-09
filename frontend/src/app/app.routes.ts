@@ -9,6 +9,20 @@ export const STORE_ROUTES: Routes = [
       {
         path: "",
         loadComponent: () =>
+          import("./features/store/store-home.component").then(
+            (m) => m.StoreHomeComponent,
+          ),
+      },
+      {
+        path: "offers",
+        loadComponent: () =>
+          import("./features/store/product-list.component").then(
+            (m) => m.ProductListComponent,
+          ),
+      },
+      {
+        path: "categories",
+        loadComponent: () =>
           import("./features/store/product-list.component").then(
             (m) => m.ProductListComponent,
           ),
@@ -46,6 +60,13 @@ export const STORE_ROUTES: Routes = [
         loadComponent: () =>
           import("./features/store/settings.component").then(
             (m) => m.SettingsComponent,
+          ),
+      },
+      {
+        path: "wishlist",
+        loadComponent: () =>
+          import("./features/store/wishlist.component").then(
+            (m) => m.WishlistComponent,
           ),
       },
     ],

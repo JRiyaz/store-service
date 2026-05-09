@@ -46,6 +46,9 @@ import {
                     placeholder="Name"
                     [class.err]="isInvalid('fullName')"
                   />
+                  <span class="err-msg" *ngIf="isInvalid('fullName')"
+                    >Name is required</span
+                  >
                 </div>
 
                 <div class="f-group full">
@@ -56,6 +59,9 @@ import {
                     placeholder="123 Street"
                     [class.err]="isInvalid('address')"
                   />
+                  <span class="err-msg" *ngIf="isInvalid('address')"
+                    >Address is required</span
+                  >
                 </div>
 
                 <div class="f-row">
@@ -67,6 +73,9 @@ import {
                       placeholder="City"
                       [class.err]="isInvalid('city')"
                     />
+                    <span class="err-msg" *ngIf="isInvalid('city')"
+                      >Required</span
+                    >
                   </div>
                   <div class="f-group">
                     <label>Country</label>
@@ -76,6 +85,9 @@ import {
                       placeholder="Country"
                       [class.err]="isInvalid('country')"
                     />
+                    <span class="err-msg" *ngIf="isInvalid('country')"
+                      >Required</span
+                    >
                   </div>
                   <div class="f-group">
                     <label>Zip</label>
@@ -85,6 +97,9 @@ import {
                       placeholder="Zip"
                       [class.err]="isInvalid('postalCode')"
                     />
+                    <span class="err-msg" *ngIf="isInvalid('postalCode')"
+                      >Required</span
+                    >
                   </div>
                 </div>
               </div>
@@ -138,6 +153,9 @@ import {
                     placeholder="0000 0000 0000 0000"
                     [class.err]="isInvalid('cardNumber')"
                   />
+                  <span class="err-msg" *ngIf="isInvalid('cardNumber')"
+                    >Enter 16-digit card number</span
+                  >
                 </div>
                 <div class="f-row-2">
                   <div class="f-group">
@@ -148,6 +166,9 @@ import {
                       placeholder="MM/YY"
                       [class.err]="isInvalid('expiry')"
                     />
+                    <span class="err-msg" *ngIf="isInvalid('expiry')"
+                      >MM/YY</span
+                    >
                   </div>
                   <div class="f-group">
                     <label>CVC</label>
@@ -157,6 +178,9 @@ import {
                       placeholder="***"
                       [class.err]="isInvalid('cvc')"
                     />
+                    <span class="err-msg" *ngIf="isInvalid('cvc')"
+                      >3-4 digits</span
+                    >
                   </div>
                 </div>
               </div>
@@ -364,6 +388,12 @@ import {
       }
       .f-group input.err {
         border-color: #ef4444;
+      }
+      .err-msg {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: #ef4444;
+        margin-top: 0.2rem;
       }
 
       .f-row {
@@ -595,6 +625,10 @@ export class CheckoutComponent {
   processPayment() {
     if (this.checkoutForm.invalid) {
       this.checkoutForm.markAllAsTouched();
+      this.notify.error(
+        "Invalid Form",
+        "Please fill in all required fields correctly.",
+      );
       return;
     }
     this.processing.set(true);

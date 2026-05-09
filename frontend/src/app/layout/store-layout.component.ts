@@ -15,6 +15,7 @@ import {
 import { CommonModule } from "@angular/common";
 import { AuthStateService, CartService, DarkModeService } from "ui-shared";
 import { StoreStateService } from "../services/store-state.service";
+import { WishlistService } from "../services/wishlist.service";
 
 @Component({
   selector: "app-store-layout",
@@ -38,18 +39,10 @@ import { StoreStateService } from "../services/store-state.service";
               [routerLinkActiveOptions]="{ exact: true }"
               >Home</a
             >
-            <a
-              routerLink="/store"
-              [queryParams]="{ category: 'Electronics' }"
-              routerLinkActive="active"
-              >Electronics</a
+            <a routerLink="/store/categories" routerLinkActive="active"
+              >Categories</a
             >
-            <a
-              routerLink="/store"
-              [queryParams]="{ category: 'Office' }"
-              routerLinkActive="active"
-              >Office</a
-            >
+            <a routerLink="/store/offers" routerLinkActive="active">Offers</a>
             <a routerLink="/store/orders" routerLinkActive="active">Orders</a>
           </nav>
 
@@ -115,6 +108,48 @@ import { StoreStateService } from "../services/store-state.service";
               </svg>
             </button>
 
+            <div class="util-wishlist" routerLink="/store/wishlist">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                ></path>
+              </svg>
+              <span class="badge" *ngIf="wishlist.items().length > 0">{{
+                wishlist.items().length
+              }}</span>
+            </div>
+
+            <div class="util-cart" routerLink="/store/cart">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path
+                  d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
+                ></path>
+              </svg>
+              <span class="badge" *ngIf="cart.totalItems() > 0">{{
+                cart.totalItems()
+              }}</span>
+            </div>
+
             <div class="user-wrap" *ngIf="auth.isLoggedIn(); else loginBtn">
               <div
                 class="user-trigger"
@@ -134,6 +169,9 @@ import { StoreStateService } from "../services/store-state.service";
                 <div class="divider"></div>
                 <a routerLink="/store/settings" (click)="closeDropdowns()"
                   >Settings</a
+                >
+                <a routerLink="/store/wishlist" (click)="closeDropdowns()"
+                  >My Wishlist</a
                 >
                 <a routerLink="/store/orders" (click)="closeDropdowns()"
                   >My Orders</a
@@ -160,28 +198,6 @@ import { StoreStateService } from "../services/store-state.service";
                 </svg>
               </button>
             </ng-template>
-
-            <div class="util-cart" routerLink="/store/cart">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path
-                  d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
-                ></path>
-              </svg>
-              <span class="badge" *ngIf="cart.totalItems() > 0">{{
-                cart.totalItems()
-              }}</span>
-            </div>
           </div>
         </div>
 
@@ -347,7 +363,8 @@ import { StoreStateService } from "../services/store-state.service";
         color: var(--primary);
       }
 
-      .util-cart {
+      .util-cart,
+      .util-wishlist {
         position: relative;
         cursor: pointer;
         color: var(--text);
@@ -355,7 +372,8 @@ import { StoreStateService } from "../services/store-state.service";
         align-items: center;
         transition: color 0.2s;
       }
-      .util-cart:hover {
+      .util-cart:hover,
+      .util-wishlist:hover {
         color: var(--primary);
       }
       .badge {
@@ -514,7 +532,7 @@ import { StoreStateService } from "../services/store-state.service";
         max-width: 1200px;
         margin: 0 auto;
         width: 100%;
-        padding: 2rem 1.5rem;
+        padding: 2rem 4rem 2rem 1.5rem;
       }
 
       /* Thin Minimal Footer */
@@ -571,6 +589,7 @@ export class StoreLayoutComponent {
   auth = inject(AuthStateService);
   cart = inject(CartService);
   darkMode = inject(DarkModeService);
+  wishlist = inject(WishlistService);
   private storeState = inject(StoreStateService);
   private router = inject(Router);
 
