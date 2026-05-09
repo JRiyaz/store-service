@@ -7,7 +7,7 @@ module.exports = withNativeFederation({
   name: "store-service",
 
   exposes: {
-    "./Component": "./projects/store-service/frontend/src/app/app.ts",
+    "./STORE_ROUTES": "./projects/store-service/frontend/src/app/app.routes.ts",
   },
 
   shared: {
