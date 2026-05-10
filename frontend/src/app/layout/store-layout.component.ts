@@ -20,6 +20,7 @@ import {
   MobileBottomNavComponent,
   NotificationService,
   ChatWidgetComponent,
+  FaviconService,
 } from "ui-shared";
 import { StoreStateService } from "../services/store-state.service";
 import { WishlistService } from "../services/wishlist.service";
@@ -627,6 +628,11 @@ export class StoreLayoutComponent {
   cartUi = inject(CartUiService);
   private storeState = inject(StoreStateService);
   private router = inject(Router);
+  private faviconService = inject(FaviconService);
+
+  constructor() {
+    this.faviconService.setFavicon("store-favicon.png");
+  }
 
   navItems = computed(() => [
     {
