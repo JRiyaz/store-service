@@ -12,13 +12,14 @@ import {
   InventoryDataService,
   Order,
   NotificationService,
+  LoaderComponent,
 } from "ui-shared";
 import { CartService } from "../../services/cart.service";
 
 @Component({
   selector: "app-checkout",
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, LoaderComponent],
   template: `
     <div class="shopper-checkout animate-fade-in">
       <header class="checkout-head">
@@ -220,7 +221,7 @@ import { CartService } from "../../services/cart.service";
             </div>
 
             <button
-              class="btn-confirm"
+              class="btn-confirm flex items-center justify-center min-h-[44px]"
               (click)="processPayment()"
               [disabled]="
                 processing() ||
@@ -228,7 +229,11 @@ import { CartService } from "../../services/cart.service";
                 cartService.items().length === 0
               "
             >
-              {{ processing() ? "Processing..." : "Place Order" }}
+              <lib-loader
+                [loading]="processing()"
+                label="Place Order"
+                customClass="!text-white"
+              ></lib-loader>
             </button>
 
             <div class="security-info">

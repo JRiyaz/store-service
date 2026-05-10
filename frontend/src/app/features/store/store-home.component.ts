@@ -1,14 +1,14 @@
 import { Component, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
-import { InventoryDataService, Product } from "ui-shared";
+import { InventoryDataService, Product, LoaderComponent } from "ui-shared";
 import { WishlistService } from "../../services/wishlist.service";
 import { CartService } from "../../services/cart.service";
 
 @Component({
   selector: "app-store-home",
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LoaderComponent],
   template: `
     <div class="store-home animate-fade-in">
       <!-- Hero Poster -->
@@ -153,10 +153,16 @@ import { CartService } from "../../services/cart.service";
                 </ng-container>
                 <ng-template #addBtn>
                   <button
-                    class="add-btn"
-                    (click)="$event.stopPropagation(); cart.addToCart(product)"
+                    class="add-btn flex items-center justify-center"
+                    (click)="$event.stopPropagation(); addToCart(product)"
+                    [disabled]="isAddingProduct() === product.id"
                   >
-                    +
+                    <span *ngIf="isAddingProduct() !== product.id">+</span>
+                    <lib-loader
+                      *ngIf="isAddingProduct() === product.id"
+                      [loading]="true"
+                      customClass="scale-50 !text-white"
+                    ></lib-loader>
                   </button>
                 </ng-template>
               </div>
@@ -166,12 +172,14 @@ import { CartService } from "../../services/cart.service";
 
         <div class="load-more-section" *ngIf="hasMoreProducts()">
           <button
-            class="btn-load-more"
+            class="btn-load-more flex items-center justify-center min-h-[50px] min-w-[240px]"
             (click)="loadMore()"
-            [class.loading]="isLoadingMore()"
+            [disabled]="isLoadingMore()"
           >
-            <span class="label" *ngIf="!isLoadingMore()">Load More Items</span>
-            <span class="loader" *ngIf="isLoadingMore()"></span>
+            <lib-loader
+              [loading]="isLoadingMore()"
+              label="Load More Items"
+            ></lib-loader>
           </button>
         </div>
       </section>
@@ -604,6 +612,7 @@ export class StoreHomeComponent {
   activeOfferIndex = signal(0);
   visibleProductCount = signal(8);
   isLoadingMore = signal(false);
+  isAddingProduct = signal<number | null>(null);
 
   featuredCategories = computed(() => {
     const products = this.inventory.products();
@@ -643,6 +652,14 @@ export class StoreHomeComponent {
 
   updateQty(productId: number, qty: number) {
     this.cart.updateQuantity(productId, qty);
+  }
+
+  addToCart(product: Product) {
+    this.isAddingProduct.set(product.id);
+    setTimeout(() => {
+      this.cart.addToCart(product);
+      this.isAddingProduct.set(null);
+    }, 600);
   }
 
   loadMore() {

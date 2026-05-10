@@ -7,7 +7,12 @@ import {
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { Router, ActivatedRoute, RouterLink } from "@angular/router";
-import { InventoryDataService, Product, Offer } from "ui-shared";
+import {
+  InventoryDataService,
+  Product,
+  Offer,
+  LoaderComponent,
+} from "ui-shared";
 import { StoreStateService } from "../../services/store-state.service";
 import { WishlistService } from "../../services/wishlist.service";
 import { CartService } from "../../services/cart.service";
@@ -15,7 +20,7 @@ import { CartService } from "../../services/cart.service";
 @Component({
   selector: "app-product-list",
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LoaderComponent],
   template: `
     <div class="shopper-products-page animate-fade-in">
       <!-- Compact Sidebar -->
@@ -217,10 +222,17 @@ import { CartService } from "../../services/cart.service";
                 </ng-container>
                 <ng-template #addBtn>
                   <button
-                    class="pill-btn add"
+                    class="pill-btn add flex items-center justify-center min-w-[100px] min-h-[32px]"
                     (click)="$event.stopPropagation(); addToCart(product)"
+                    [disabled]="isAddingProduct() === product.id"
                   >
-                    Add to Cart
+                    <lib-loader
+                      [loading]="isAddingProduct() === product.id"
+                      [label]="
+                        isAddingProduct() === product.id ? '' : 'Add to Cart'
+                      "
+                      customClass="scale-75"
+                    ></lib-loader>
                   </button>
                 </ng-template>
               </div>
@@ -243,14 +255,14 @@ import { CartService } from "../../services/cart.service";
 
         <div class="load-more-section" *ngIf="hasMoreProducts()">
           <button
-            class="btn-load-more"
+            class="btn-load-more flex items-center justify-center min-h-[50px] min-w-[240px]"
             (click)="loadMore()"
-            [class.loading]="isLoadingMore()"
+            [disabled]="isLoadingMore()"
           >
-            <span class="label" *ngIf="!isLoadingMore()"
-              >Load More Products</span
-            >
-            <span class="loader" *ngIf="isLoadingMore()"></span>
+            <lib-loader
+              [loading]="isLoadingMore()"
+              label="Load More Products"
+            ></lib-loader>
           </button>
         </div>
 
@@ -1024,8 +1036,14 @@ export class ProductListComponent {
     return this.cartService.items().find((i) => i.id === productId);
   }
 
+  isAddingProduct = signal<number | null>(null);
+
   addToCart(product: Product) {
-    this.cartService.addToCart(product);
+    this.isAddingProduct.set(product.id);
+    setTimeout(() => {
+      this.cartService.addToCart(product);
+      this.isAddingProduct.set(null);
+    }, 600);
   }
 
   updateQty(productId: number, qty: number) {

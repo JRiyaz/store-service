@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterLink, ActivatedRoute } from "@angular/router";
-import { InventoryDataService, Product } from "ui-shared";
+import { InventoryDataService, Product, LoaderComponent } from "ui-shared";
 import { toSignal } from "@angular/core/rxjs-interop";
 import { map } from "rxjs/operators";
 import { WishlistService } from "../../services/wishlist.service";
@@ -10,7 +10,7 @@ import { CartService } from "../../services/cart.service";
 @Component({
   selector: "app-product-detail",
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LoaderComponent],
   template: `
     <div
       class="shopper-detail animate-fade-in"
@@ -76,8 +76,16 @@ import { CartService } from "../../services/cart.service";
               </ng-container>
 
               <ng-template #addBtn>
-                <button class="btn-primary" (click)="addToCart(product()!)">
-                  Add to Cart
+                <button
+                  class="btn-primary flex items-center justify-center min-h-[44px]"
+                  (click)="addToCart(product()!)"
+                  [disabled]="isAddingToCart()"
+                >
+                  <lib-loader
+                    [loading]="isAddingToCart()"
+                    label="Add to Cart"
+                    customClass="!text-white"
+                  ></lib-loader>
                 </button>
               </ng-template>
 
@@ -398,12 +406,17 @@ export class ProductDetailComponent {
   });
 
   loading = computed(() => !this.product() && this.inventoryService.loading());
+  isAddingToCart = signal(false);
 
   getItemInCart(productId: number) {
     return this.cartService.items().find((i) => i.id === productId);
   }
   addToCart(product: Product) {
-    this.cartService.addToCart(product);
+    this.isAddingToCart.set(true);
+    setTimeout(() => {
+      this.cartService.addToCart(product);
+      this.isAddingToCart.set(false);
+    }, 800);
   }
   updateQty(productId: number, qty: number) {
     this.cartService.updateQuantity(productId, qty);
