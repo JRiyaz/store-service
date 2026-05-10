@@ -19,6 +19,7 @@ import {
   DarkModeService,
   MobileBottomNavComponent,
   NotificationService,
+  ChatWidgetComponent,
 } from "ui-shared";
 import { StoreStateService } from "../services/store-state.service";
 import { WishlistService } from "../services/wishlist.service";
@@ -36,6 +37,7 @@ import { CartDrawerComponent } from "../shared/components/cart-drawer/cart-drawe
     RouterLinkActive,
     MobileBottomNavComponent,
     CartDrawerComponent,
+    ChatWidgetComponent,
   ],
   template: `
     <div class="shopper-shell" [class.dark]="darkMode.isDarkMode()">
@@ -281,6 +283,9 @@ import { CartDrawerComponent } from "../shared/components/cart-drawer/cart-drawe
 
       <!-- Cart Drawer -->
       <ui-cart-drawer></ui-cart-drawer>
+
+      <!-- Support Chat (Customer Side) -->
+      <ui-chat-widget currentRole="customer" userName="Customer" />
     </div>
   `,
   styles: [
