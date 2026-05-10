@@ -1,21 +1,37 @@
 import { Component, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { RouterLink } from "@angular/router";
-import { InventoryDataService, Product, LoaderComponent } from "ui-shared";
+import {
+  InventoryDataService,
+  Product,
+  LoaderComponent,
+  TypewriterComponent,
+} from "ui-shared";
 import { WishlistService } from "../../services/wishlist.service";
 import { CartService } from "../../services/cart.service";
 
 @Component({
   selector: "app-store-home",
   standalone: true,
-  imports: [CommonModule, RouterLink, LoaderComponent],
+  imports: [CommonModule, RouterLink, LoaderComponent, TypewriterComponent],
   template: `
     <div class="store-home animate-fade-in">
       <!-- Hero Poster -->
       <section class="hero-poster">
         <div class="hero-content">
           <span class="badge">Spring Collection 2026</span>
-          <h1>Modern Living,<br />Refined Style.</h1>
+          <h1>
+            <lib-typewriter
+              [words]="[
+                'Modern Living.',
+                'Refined Style.',
+                'Premium Quality.',
+                'Curated Picks.',
+              ]"
+              [typeSpeed]="80"
+              [deleteSpeed]="40"
+            ></lib-typewriter>
+          </h1>
           <p>
             Discover our latest collection of premium home and lifestyle
             products designed for the contemporary home.
