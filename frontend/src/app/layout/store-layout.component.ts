@@ -12,8 +12,10 @@ import {
   RouterLink,
   RouterLinkActive,
   Router,
+  NavigationEnd,
 } from "@angular/router";
 import { CommonModule } from "@angular/common";
+import { filter } from "rxjs/operators";
 import {
   AuthStateService,
   DarkModeService,
@@ -632,6 +634,16 @@ export class StoreLayoutComponent {
 
   constructor() {
     this.faviconService.setFavicon("store-favicon.png");
+
+    // Close search and dropdowns on any navigation except the search page itself
+    this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe((event: any) => {
+        if (!event.urlAfterRedirects.includes("/store/search")) {
+          this.isSearchOpen.set(false);
+        }
+        this.isDropdownOpen.set(false);
+      });
   }
 
   navItems = computed(() => [

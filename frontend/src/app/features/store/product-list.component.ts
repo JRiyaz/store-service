@@ -247,7 +247,27 @@ import { CartService } from "../../services/cart.service";
                 {{ product.name }}
               </h3>
               <div class="info-bottom">
-                <span class="price">{{ product.price | currency }}</span>
+                <div class="flex items-baseline gap-2">
+                  <span
+                    class="price"
+                    [class.text-rose-500]="getProductOffer(product.id)"
+                  >
+                    {{
+                      (getProductOffer(product.id)
+                        ? product.price *
+                          (1 - getProductOffer(product.id)!.discount / 100)
+                        : product.price
+                      ) | currency
+                    }}
+                  </span>
+                  @if (getProductOffer(product.id)) {
+                    <span
+                      class="original text-[10px] text-slate-400 line-through font-bold"
+                    >
+                      {{ product.price | currency }}
+                    </span>
+                  }
+                </div>
               </div>
             </div>
           </div>

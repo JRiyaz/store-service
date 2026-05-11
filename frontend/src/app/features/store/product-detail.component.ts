@@ -1,10 +1,15 @@
-import { Component, inject, signal, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { RouterLink, ActivatedRoute } from "@angular/router";
-import { InventoryDataService, Product, LoaderComponent } from "ui-shared";
+import { Component, computed, inject, signal } from "@angular/core";
 import { toSignal } from "@angular/core/rxjs-interop";
+import { ActivatedRoute, RouterLink } from "@angular/router";
 import { map } from "rxjs/operators";
-import { WishlistService } from "../../services/wishlist.service";
+import {
+  AuthStateService,
+  InventoryDataService,
+  LoaderComponent,
+  Product,
+  Offer,
+} from "ui-shared";
 import { CartService } from "../../services/cart.service";
 
 @Component({
@@ -48,7 +53,27 @@ import { CartService } from "../../services/cart.service";
             <h1>{{ product()?.name }}</h1>
             <div class="meta">
               <div class="stars">★★★★★ <span>(12)</span></div>
-              <div class="price">{{ product()?.price | currency }}</div>
+              <div class="price-wrapper flex items-baseline gap-3 relative">
+                <div
+                  class="price transition-all duration-300"
+                  [class.discounted]="activePromotion() && isOfferApplied()"
+                >
+                  {{
+                    (activePromotion() && isOfferApplied()
+                      ? (product()?.price || 0) *
+                        (1 - activePromotion()!.discount / 100)
+                      : product()?.price
+                    ) | currency
+                  }}
+                </div>
+                @if (activePromotion() && isOfferApplied()) {
+                  <div
+                    class="original-price text-sm text-slate-400 line-through font-bold animate-fade-in"
+                  >
+                    {{ product()?.price | currency }}
+                  </div>
+                }
+              </div>
             </div>
           </div>
 
@@ -59,6 +84,55 @@ import { CartService } from "../../services/cart.service";
               <span class="dot"></span>
               {{ (product()?.stock || 0) > 0 ? "In Stock" : "Out of Stock" }}
             </div>
+
+            <!-- Interactive Offer Selection -->
+            @if (activePromotion()) {
+              <div
+                class="offer-selection-area mb-4 p-4 bg-primary/5 rounded-xl border border-primary/10 relative overflow-hidden group"
+              >
+                <div class="flex items-center justify-between relative z-10">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary text-xs font-black"
+                    >
+                      %
+                    </div>
+                    <div>
+                      <p
+                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest"
+                      >
+                        Available Offer
+                      </p>
+                      <p
+                        class="text-xs font-black text-slate-900 dark:text-white"
+                      >
+                        {{ activePromotion()?.discount }}% Special Discount
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    (click)="toggleOffer()"
+                    class="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all"
+                    [class.bg-primary]="!isOfferApplied()"
+                    [class.text-white]="!isOfferApplied()"
+                    [class.text-rose-500]="isOfferApplied()"
+                    [class.hover:bg-rose-500/10]="isOfferApplied()"
+                  >
+                    {{ isOfferApplied() ? "Remove" : "Apply" }}
+                  </button>
+                </div>
+
+                <!-- Sprinkles Animation Layer -->
+                @if (isAnimatingSprinkles()) {
+                  <div class="sprinkles-container">
+                    @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+                      <div class="sprinkle" [style.--i]="i"></div>
+                    }
+                  </div>
+                }
+              </div>
+            }
 
             <div class="actions">
               <ng-container
@@ -107,10 +181,13 @@ import { CartService } from "../../services/cart.service";
               </button>
             </div>
           </div>
-
-          <div class="tabs">
+          <div class="tabs mt-8">
             <div class="tab-item">
-              <h3>Specifications</h3>
+              <h3
+                class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4"
+              >
+                Specifications
+              </h3>
               <ul class="spec-list">
                 <li><span>Material</span> Industrial Polymer</li>
                 <li><span>Weight</span> 1.2 kg</li>
@@ -136,16 +213,17 @@ import { CartService } from "../../services/cart.service";
       .shopper-detail {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 0.75rem;
         max-width: 1000px;
         margin: 0 auto;
+        padding: 0 1rem;
       }
 
       .bread {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 700;
         color: var(--text-muted);
       }
@@ -162,8 +240,8 @@ import { CartService } from "../../services/cart.service";
 
       .detail-grid {
         display: grid;
-        grid-template-columns: 420px 1fr;
-        gap: 3rem;
+        grid-template-columns: 380px 1fr;
+        gap: 2rem;
         align-items: start;
       }
 
@@ -207,7 +285,7 @@ import { CartService } from "../../services/cart.service";
       .info-col {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1rem;
       }
       .cat {
         font-size: 0.7rem;
@@ -228,7 +306,7 @@ import { CartService } from "../../services/cart.service";
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-bottom: 1rem;
+        padding-bottom: 0.75rem;
         border-bottom: 1px solid var(--border);
       }
       .stars {
@@ -240,10 +318,11 @@ import { CartService } from "../../services/cart.service";
         color: var(--text-muted);
         font-weight: 600;
       }
-      .price {
-        font-size: 1.5rem;
-        font-weight: 900;
-        color: var(--primary);
+      .price.discounted {
+        color: #ef4444;
+      }
+      .original-price {
+        opacity: 0.6;
       }
 
       .desc {
@@ -254,13 +333,13 @@ import { CartService } from "../../services/cart.service";
       }
 
       .action-box {
-        padding: 1.5rem;
+        padding: 1.25rem;
         background: var(--bg);
         border: 1px solid var(--border);
         border-radius: 1rem;
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.75rem;
       }
       .stock {
         display: flex;
@@ -380,6 +459,40 @@ import { CartService } from "../../services/cart.service";
         color: var(--text-muted);
       }
 
+      /* Sprinkles Animation */
+      .sprinkles-container {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 5;
+      }
+      .sprinkle {
+        position: absolute;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--primary);
+        opacity: 0;
+        animation: sprinkle-out 0.8s ease-out forwards;
+      }
+      @keyframes sprinkle-out {
+        0% {
+          transform: scale(0) rotate(0deg) translate(0, 0);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(1) rotate(360deg)
+            translate(
+              calc(cos(var(--i) * 45deg) * 60px),
+              calc(sin(var(--i) * 45deg) * 60px)
+            );
+          opacity: 0;
+        }
+      }
+
       @media (max-width: 900px) {
         .detail-grid {
           grid-template-columns: 1fr;
@@ -393,6 +506,7 @@ import { CartService } from "../../services/cart.service";
 })
 export class ProductDetailComponent {
   private route = inject(ActivatedRoute);
+  public auth = inject(AuthStateService);
   private inventoryService = inject(InventoryDataService);
   private cartService = inject(CartService);
 
@@ -404,6 +518,61 @@ export class ProductDetailComponent {
     const id = this.productId();
     return this.inventoryService.products().find((p) => p.id === id);
   });
+
+  activePromotion = computed(() => {
+    const id = this.productId();
+    const offers = this.inventoryService.offers();
+    return offers.find((o) => o.productId === id);
+  });
+
+  isAddingDiscount = signal(false);
+  isAnimatingSprinkles = signal(false);
+  isOfferApplied = signal(true); // Default to applied for visibility
+
+  toggleOffer() {
+    if (!this.isOfferApplied()) {
+      this.isAnimatingSprinkles.set(true);
+      setTimeout(() => this.isAnimatingSprinkles.set(false), 800);
+    }
+    this.isOfferApplied.update((v) => !v);
+  }
+
+  updateDiscount(val: string) {
+    const discount = Number(val);
+    const existing = this.activePromotion();
+
+    if (existing) {
+      this.inventoryService.updateOffer({
+        ...existing,
+        discount,
+      });
+    } else {
+      this.addDefaultDiscount(discount);
+    }
+  }
+
+  removeDiscount() {
+    const existing = this.activePromotion();
+    if (existing) {
+      this.inventoryService.deleteOffer(existing.id);
+    }
+  }
+
+  addDefaultDiscount(discount = 10) {
+    const newOffer: Offer = {
+      id: "OFFER-" + Math.random().toString(36).substr(2, 5).toUpperCase(),
+      title: `${this.product()?.name} Promo`,
+      description: `Storefront promotion`,
+      discount,
+      productId: this.product()?.id,
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+      color: "#9333ea",
+    };
+    this.inventoryService.addOffer(newOffer);
+    this.isOfferApplied.set(true);
+  }
 
   loading = computed(() => !this.product() && this.inventoryService.loading());
   isAddingToCart = signal(false);
