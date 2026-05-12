@@ -1,13 +1,13 @@
-import { Component, inject, computed, signal } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterLink, ActivatedRoute } from "@angular/router";
-import { InventoryDataService, Product } from "ui-shared";
-import { StoreStateService } from "../../services/store-state.service";
-import { WishlistService } from "../../services/wishlist.service";
-import { CartService } from "../../services/cart.service";
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { InventoryDataService } from 'ui-shared';
+import { CartService } from '../../services/cart.service';
+import { StoreStateService } from '../../services/store-state.service';
+import { WishlistService } from '../../services/wishlist.service';
 
 @Component({
-  selector: "app-search-results",
+  selector: 'app-search-results',
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
@@ -252,7 +252,6 @@ import { CartService } from "../../services/cart.service";
 export class SearchResultsComponent {
   private inventory = inject(InventoryDataService);
   private state = inject(StoreStateService);
-  private route = inject(ActivatedRoute);
   cart = inject(CartService);
   wishlist = inject(WishlistService);
 

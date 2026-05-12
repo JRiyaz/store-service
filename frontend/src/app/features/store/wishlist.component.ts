@@ -1,12 +1,11 @@
-import { Component, inject } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterLink } from "@angular/router";
-import { WishlistService } from "../../services/wishlist.service";
-import { Product } from "ui-shared";
-import { CartService } from "../../services/cart.service";
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { CartService } from '../../services/cart.service';
+import { WishlistService } from '../../services/wishlist.service';
 
 @Component({
-  selector: "app-wishlist",
+  selector: 'app-wishlist',
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `

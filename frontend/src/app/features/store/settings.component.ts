@@ -1,15 +1,10 @@
-import { Component, inject, signal } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import {
-  FormBuilder,
-  FormGroup,
-  Validators,
-  ReactiveFormsModule,
-} from "@angular/forms";
-import { AuthStateService, NotificationService } from "ui-shared";
+import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AuthStateService, NotificationService } from 'ui-shared';
 
 @Component({
-  selector: "app-settings",
+  selector: 'app-settings',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
@@ -311,22 +306,16 @@ export class SettingsComponent {
   loading = signal(false);
 
   profileForm: FormGroup = this.fb.group({
-    firstName: [
-      this.authService.user()?.name.split(" ")[0] || "",
-      Validators.required,
-    ],
-    lastName: [
-      this.authService.user()?.name.split(" ")[1] || "",
-      Validators.required,
-    ],
-    email: [{ value: this.authService.user()?.email || "", disabled: true }],
-    phone: ["+1 (555) 000-1234"],
+    firstName: [this.authService.user()?.name.split(' ')[0] || '', Validators.required],
+    lastName: [this.authService.user()?.name.split(' ')[1] || '', Validators.required],
+    email: [{ value: this.authService.user()?.email || '', disabled: true }],
+    phone: ['+1 (555) 000-1234'],
   });
 
   passwordForm: FormGroup = this.fb.group({
-    currentPassword: ["", Validators.required],
-    newPassword: ["", [Validators.required, Validators.minLength(8)]],
-    confirmPassword: ["", Validators.required],
+    currentPassword: ['', Validators.required],
+    newPassword: ['', [Validators.required, Validators.minLength(8)]],
+    confirmPassword: ['', Validators.required],
   });
 
   saveProfile() {
@@ -334,10 +323,7 @@ export class SettingsComponent {
       this.loading.set(true);
       setTimeout(() => {
         this.loading.set(false);
-        this.notify.success(
-          "Profile Saved",
-          "Your personal information has been updated.",
-        );
+        this.notify.success('Profile Saved', 'Your personal information has been updated.');
       }, 1000);
     }
   }
@@ -347,10 +333,7 @@ export class SettingsComponent {
       this.loading.set(true);
       setTimeout(() => {
         this.loading.set(false);
-        this.notify.success(
-          "Password Updated",
-          "Your security settings have been changed successfully.",
-        );
+        this.notify.success('Password Updated', 'Your security settings have been changed successfully.');
         this.passwordForm.reset();
       }, 1500);
     }

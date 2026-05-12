@@ -1,10 +1,10 @@
-import { Component, inject, computed, signal } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterLink } from "@angular/router";
-import { InventoryDataService, AuthStateService, Order } from "ui-shared";
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { AuthStateService, InventoryDataService } from 'ui-shared';
 
 @Component({
-  selector: "app-orders",
+  selector: 'app-orders',
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
@@ -299,14 +299,10 @@ export class OrdersComponent {
   userOrders = computed(() => {
     const userName = this.authService.user()?.name;
     if (!userName) return [];
-    return this.inventoryService
-      .orders()
-      .filter((o) => o.customer === userName);
+    return this.inventoryService.orders().filter((o) => o.customer === userName);
   });
 
-  pendingCount = computed(
-    () => this.userOrders().filter((o) => o.status === "Pending").length,
-  );
+  pendingCount = computed(() => this.userOrders().filter((o) => o.status === 'Pending').length);
   toggleDetails(id: string) {
     this.expandedOrderId.set(this.expandedOrderId() === id ? null : id);
   }

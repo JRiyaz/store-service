@@ -1,12 +1,12 @@
-import { Injectable, signal } from "@angular/core";
+import { Injectable, signal } from '@angular/core';
 
 @Injectable({
-  providedIn: "root",
+  providedIn: 'root',
 })
 export class StoreStateService {
-  searchQuery = signal("");
+  searchQuery = signal('');
   selectedCategory = signal<string | null>(null);
-  sortBy = signal("name");
+  sortBy = signal('name');
   showOffersOnly = signal(false);
 
   setSearchQuery(query: string) {

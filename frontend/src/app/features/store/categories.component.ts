@@ -1,10 +1,10 @@
-import { Component, inject, computed } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterLink } from "@angular/router";
-import { InventoryDataService } from "ui-shared";
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { InventoryDataService } from 'ui-shared';
 
 @Component({
-  selector: "app-categories",
+  selector: 'app-categories',
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
@@ -119,28 +119,21 @@ export class CategoriesComponent {
     const products = this.inventory.products();
     const cats = [...new Set(products.map((p) => p.category))];
 
-    const colors = [
-      "#fef3c7",
-      "#dcfce7",
-      "#dbeafe",
-      "#f3e8ff",
-      "#fee2e2",
-      "#ffedd5",
-    ];
+    const colors = ['#fef3c7', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2', '#ffedd5'];
     const icons: Record<string, string> = {
-      Electronics: "💻",
-      Office: "📁",
-      Furniture: "🪑",
-      Accessories: "⌚",
-      Kitchen: "🍳",
-      Sports: "⚽",
+      Electronics: '💻',
+      Office: '📁',
+      Furniture: '🪑',
+      Accessories: '⌚',
+      Kitchen: '🍳',
+      Sports: '⚽',
     };
 
     return cats.map((name, i) => ({
       name,
       count: products.filter((p) => p.category === name).length,
       color: colors[i % colors.length],
-      icon: icons[name] || "📦",
+      icon: icons[name] || '📦',
     }));
   });
 }

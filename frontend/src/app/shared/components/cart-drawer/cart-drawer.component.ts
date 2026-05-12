@@ -1,11 +1,11 @@
-import { Component, inject } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterModule } from "@angular/router";
-import { CartService } from "../../../services/cart.service";
-import { CartUiService } from "../../../services/cart-ui.service";
+import { CommonModule } from '@angular/common';
+import { Component, inject } from '@angular/core';
+import { RouterModule } from '@angular/router';
+import { CartService } from '../../../services/cart.service';
+import { CartUiService } from '../../../services/cart-ui.service';
 
 @Component({
-  selector: "ui-cart-drawer",
+  selector: 'ui-cart-drawer',
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `

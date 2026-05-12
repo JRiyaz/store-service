@@ -1,37 +1,22 @@
-import {
-  Component,
-  inject,
-  signal,
-  computed,
-  HostListener,
-  ElementRef,
-  ViewChild,
-} from "@angular/core";
-import {
-  RouterOutlet,
-  RouterLink,
-  RouterLinkActive,
-  Router,
-  NavigationEnd,
-} from "@angular/router";
-import { CommonModule } from "@angular/common";
-import { filter } from "rxjs/operators";
+import { CommonModule } from '@angular/common';
+import { Component, computed, type ElementRef, HostListener, inject, signal, ViewChild } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import {
   AuthStateService,
-  DarkModeService,
-  MobileBottomNavComponent,
-  NotificationService,
   ChatWidgetComponent,
+  DarkModeService,
   FaviconService,
-} from "ui-shared";
-import { StoreStateService } from "../services/store-state.service";
-import { WishlistService } from "../services/wishlist.service";
-import { CartService } from "../services/cart.service";
-import { CartUiService } from "../services/cart-ui.service";
-import { CartDrawerComponent } from "../shared/components/cart-drawer/cart-drawer.component";
+  MobileBottomNavComponent,
+} from 'ui-shared';
+import { CartService } from '../services/cart.service';
+import { CartUiService } from '../services/cart-ui.service';
+import { StoreStateService } from '../services/store-state.service';
+import { WishlistService } from '../services/wishlist.service';
+import { CartDrawerComponent } from '../shared/components/cart-drawer/cart-drawer.component';
 
 @Component({
-  selector: "app-store-layout",
+  selector: 'app-store-layout',
   standalone: true,
   imports: [
     CommonModule,
@@ -633,40 +618,38 @@ export class StoreLayoutComponent {
   private faviconService = inject(FaviconService);
 
   constructor() {
-    this.faviconService.setFavicon("store-favicon.png");
+    this.faviconService.setFavicon('store-favicon.png');
 
     // Close search and dropdowns on any navigation except the search page itself
-    this.router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
-      .subscribe((event: any) => {
-        if (!event.urlAfterRedirects.includes("/store/search")) {
-          this.isSearchOpen.set(false);
-        }
-        this.isDropdownOpen.set(false);
-      });
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event: any) => {
+      if (!event.urlAfterRedirects.includes('/store/search')) {
+        this.isSearchOpen.set(false);
+      }
+      this.isDropdownOpen.set(false);
+    });
   }
 
   navItems = computed(() => [
     {
-      label: "Home",
-      link: "/store",
+      label: 'Home',
+      link: '/store',
       exact: true,
       icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>`,
     },
     {
-      label: "Shop",
-      link: "/store/categories",
+      label: 'Shop',
+      link: '/store/categories',
       icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>`,
     },
     {
-      label: "Cart",
-      link: "/store/cart",
+      label: 'Cart',
+      link: '/store/cart',
       badge: this.cart.totalItems(),
       icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>`,
     },
     {
-      label: "Profile",
-      link: "/user/settings",
+      label: 'Profile',
+      link: '/user/settings',
       icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`,
     },
   ]);
@@ -675,14 +658,14 @@ export class StoreLayoutComponent {
   isSearchOpen = signal(false);
   isScrolled = signal(false);
 
-  @ViewChild("searchInput") searchInput!: ElementRef;
+  @ViewChild('searchInput') searchInput!: ElementRef;
 
-  @HostListener("window:scroll")
+  @HostListener('window:scroll')
   onScroll() {
     this.isScrolled.set(window.scrollY > 15);
   }
 
-  @HostListener("window:keydown.esc")
+  @HostListener('window:keydown.esc')
   onEsc() {
     this.isSearchOpen.set(false);
   }
@@ -705,14 +688,14 @@ export class StoreLayoutComponent {
   logout() {
     this.auth.logout();
     this.isDropdownOpen.set(false);
-    this.router.navigate(["/store"]);
+    this.router.navigate(['/store']);
   }
 
   onSearch(event: Event) {
     const query = (event.target as HTMLInputElement).value;
     this.storeState.setSearchQuery(query);
-    if (this.router.url !== "/store/search") {
-      this.router.navigate(["/store/search"]);
+    if (this.router.url !== '/store/search') {
+      this.router.navigate(['/store/search']);
     }
   }
 }

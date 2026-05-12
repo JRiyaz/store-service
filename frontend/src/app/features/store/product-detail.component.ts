@@ -1,19 +1,13 @@
-import { CommonModule } from "@angular/common";
-import { Component, computed, inject, signal } from "@angular/core";
-import { toSignal } from "@angular/core/rxjs-interop";
-import { ActivatedRoute, RouterLink } from "@angular/router";
-import { map } from "rxjs/operators";
-import {
-  AuthStateService,
-  InventoryDataService,
-  LoaderComponent,
-  Product,
-  Offer,
-} from "ui-shared";
-import { CartService } from "../../services/cart.service";
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { map } from 'rxjs/operators';
+import { AuthStateService, InventoryDataService, LoaderComponent, type Offer, type Product } from 'ui-shared';
+import { CartService } from '../../services/cart.service';
 
 @Component({
-  selector: "app-product-detail",
+  selector: 'app-product-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, LoaderComponent],
   template: `
@@ -510,9 +504,7 @@ export class ProductDetailComponent {
   private inventoryService = inject(InventoryDataService);
   private cartService = inject(CartService);
 
-  productId = toSignal(
-    this.route.params.pipe(map((params) => Number(params["id"]))),
-  );
+  productId = toSignal(this.route.params.pipe(map((params) => Number(params.id))));
 
   product = computed(() => {
     const id = this.productId();
@@ -560,15 +552,13 @@ export class ProductDetailComponent {
 
   addDefaultDiscount(discount = 10) {
     const newOffer: Offer = {
-      id: "OFFER-" + Math.random().toString(36).substr(2, 5).toUpperCase(),
+      id: `OFFER-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
       title: `${this.product()?.name} Promo`,
       description: `Storefront promotion`,
       discount,
       productId: this.product()?.id,
-      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0],
-      color: "#9333ea",
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      color: '#9333ea',
     };
     this.inventoryService.addOffer(newOffer);
     this.isOfferApplied.set(true);

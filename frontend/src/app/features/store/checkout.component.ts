@@ -1,23 +1,12 @@
-import { Component, inject, signal, computed } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterLink, Router } from "@angular/router";
-import {
-  FormBuilder,
-  FormGroup,
-  Validators,
-  ReactiveFormsModule,
-} from "@angular/forms";
-import {
-  AuthStateService,
-  InventoryDataService,
-  Order,
-  NotificationService,
-  LoaderComponent,
-} from "ui-shared";
-import { CartService } from "../../services/cart.service";
+import { CommonModule } from '@angular/common';
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { AuthStateService, InventoryDataService, LoaderComponent, NotificationService, type Order } from 'ui-shared';
+import { CartService } from '../../services/cart.service';
 
 @Component({
-  selector: "app-checkout",
+  selector: 'app-checkout',
   standalone: true,
   imports: [CommonModule, RouterLink, ReactiveFormsModule, LoaderComponent],
   template: `
@@ -597,7 +586,6 @@ import { CartService } from "../../services/cart.service";
 })
 export class CheckoutComponent {
   private fb = inject(FormBuilder);
-  private router = inject(Router);
   private notify = inject(NotificationService);
   cartService = inject(CartService);
   authService = inject(AuthStateService);
@@ -605,21 +593,18 @@ export class CheckoutComponent {
 
   processing = signal(false);
   success = signal(false);
-  orderId = signal("");
+  orderId = signal('');
 
   checkoutForm: FormGroup = this.fb.group({
-    fullName: [this.authService.user()?.name || "", Validators.required],
-    address: ["", Validators.required],
-    city: ["", Validators.required],
-    country: ["", Validators.required],
-    postalCode: ["", Validators.required],
-    paymentMethod: ["card", Validators.required],
-    cardNumber: ["", [Validators.required, Validators.pattern("^[0-9]{16}$")]],
-    expiry: [
-      "",
-      [Validators.required, Validators.pattern("^[0-9]{2}/[0-9]{2}$")],
-    ],
-    cvc: ["", [Validators.required, Validators.pattern("^[0-9]{3,4}$")]],
+    fullName: [this.authService.user()?.name || '', Validators.required],
+    address: ['', Validators.required],
+    city: ['', Validators.required],
+    country: ['', Validators.required],
+    postalCode: ['', Validators.required],
+    paymentMethod: ['card', Validators.required],
+    cardNumber: ['', [Validators.required, Validators.pattern('^[0-9]{16}$')]],
+    expiry: ['', [Validators.required, Validators.pattern('^[0-9]{2}/[0-9]{2}$')]],
+    cvc: ['', [Validators.required, Validators.pattern('^[0-9]{3,4}$')]],
   });
 
   isInvalid(controlName: string) {
@@ -630,21 +615,18 @@ export class CheckoutComponent {
   processPayment() {
     if (this.checkoutForm.invalid) {
       this.checkoutForm.markAllAsTouched();
-      this.notify.error(
-        "Invalid Form",
-        "Please fill in all required fields correctly.",
-      );
+      this.notify.error('Invalid Form', 'Please fill in all required fields correctly.');
       return;
     }
     this.processing.set(true);
     setTimeout(() => {
-      const id = "ORD-" + Math.floor(Math.random() * 90000 + 10000);
+      const id = `ORD-${Math.floor(Math.random() * 90000 + 10000)}`;
       const newOrder: Order = {
         id,
-        customer: this.authService.user()?.name || "Guest",
-        status: "Pending",
+        customer: this.authService.user()?.name || 'Guest',
+        status: 'Pending',
         amount: this.cartService.total(),
-        date: new Date().toISOString().split("T")[0],
+        date: new Date().toISOString().split('T')[0],
         priority: false,
         items: this.cartService.items().map((item) => ({
           productId: item.id,

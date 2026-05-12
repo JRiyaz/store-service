@@ -1,28 +1,22 @@
-import { Injectable, signal, computed, inject } from "@angular/core";
-import { Product, NotificationService } from "ui-shared";
-import { CartUiService } from "./cart-ui.service";
+import { computed, Injectable, inject, signal } from '@angular/core';
+import { NotificationService, type Product } from 'ui-shared';
 
 export interface CartItem extends Product {
   quantity: number;
 }
 
 @Injectable({
-  providedIn: "root",
+  providedIn: 'root',
 })
 export class CartService {
   private _items = signal<CartItem[]>([]);
-  private ui = inject(CartUiService);
   private notify = inject(NotificationService);
 
   readonly items = this._items.asReadonly();
 
-  readonly totalItems = computed(() =>
-    this._items().reduce((acc, item) => acc + item.quantity, 0),
-  );
+  readonly totalItems = computed(() => this._items().reduce((acc, item) => acc + item.quantity, 0));
 
-  readonly subtotal = computed(() =>
-    this._items().reduce((acc, item) => acc + item.price * item.quantity, 0),
-  );
+  readonly subtotal = computed(() => this._items().reduce((acc, item) => acc + item.price * item.quantity, 0));
 
   readonly tax = computed(() => this.subtotal() * 0.15); // 15% tax
 
@@ -32,16 +26,11 @@ export class CartService {
     this._items.update((items) => {
       const existing = items.find((i) => i.id === product.id);
       if (existing) {
-        return items.map((i) =>
-          i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i,
-        );
+        return items.map((i) => (i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i));
       }
       return [...items, { ...product, quantity }];
     });
-    this.notify.success(
-      "Added to Cart",
-      `${product.name} is now in your cart.`,
-    );
+    this.notify.success('Added to Cart', `${product.name} is now in your cart.`);
   }
 
   updateQuantity(productId: number, quantity: number): void {
@@ -49,15 +38,13 @@ export class CartService {
       this.removeFromCart(productId);
       return;
     }
-    this._items.update((items) =>
-      items.map((i) => (i.id === productId ? { ...i, quantity } : i)),
-    );
+    this._items.update((items) => items.map((i) => (i.id === productId ? { ...i, quantity } : i)));
   }
 
   removeFromCart(productId: number): void {
     const item = this._items().find((i) => i.id === productId);
     this._items.update((items) => items.filter((i) => i.id !== productId));
-    if (item) this.notify.info("Removed", `${item.name} removed from cart.`);
+    if (item) this.notify.info('Removed', `${item.name} removed from cart.`);
   }
 
   clearCart(): void {

@@ -1,24 +1,13 @@
-import {
-  Component,
-  inject,
-  computed,
-  signal,
-  HostListener,
-} from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { Router, ActivatedRoute, RouterLink } from "@angular/router";
-import {
-  InventoryDataService,
-  Product,
-  Offer,
-  LoaderComponent,
-} from "ui-shared";
-import { StoreStateService } from "../../services/store-state.service";
-import { WishlistService } from "../../services/wishlist.service";
-import { CartService } from "../../services/cart.service";
+import { CommonModule } from '@angular/common';
+import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { InventoryDataService, LoaderComponent, type Product } from 'ui-shared';
+import { CartService } from '../../services/cart.service';
+import { StoreStateService } from '../../services/store-state.service';
+import { WishlistService } from '../../services/wishlist.service';
 
 @Component({
-  selector: "app-product-list",
+  selector: 'app-product-list',
   standalone: true,
   imports: [CommonModule, RouterLink, LoaderComponent],
   template: `
@@ -950,19 +939,19 @@ export class ProductListComponent {
   constructor() {
     this.route.url.subscribe(() => this.updateOffersState());
     this.route.queryParams.subscribe((params) => {
-      if (params["category"]) {
-        this.storeState.setCategory(params["category"]);
+      if (params.category) {
+        this.storeState.setCategory(params.category);
       }
     });
   }
 
-  @HostListener("document:click")
+  @HostListener('document:click')
   closeDropdowns() {
     this.isSortOpen.set(false);
   }
 
   private updateOffersState() {
-    const isOffers = this.router.url.includes("/offers");
+    const isOffers = this.router.url.includes('/offers');
     this.storeState.setShowOffersOnly(isOffers);
   }
 
@@ -976,8 +965,7 @@ export class ProductListComponent {
   });
 
   getCategoryCount(cat: string) {
-    return this.inventoryService.products().filter((p) => p.category === cat)
-      .length;
+    return this.inventoryService.products().filter((p) => p.category === cat).length;
   }
 
   filteredProducts = computed(() => {
@@ -987,11 +975,7 @@ export class ProductListComponent {
     const sortBy = this.storeState.sortBy();
 
     if (query) {
-      prods = prods.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.description.toLowerCase().includes(query),
-      );
+      prods = prods.filter((p) => p.name.toLowerCase().includes(query) || p.description.toLowerCase().includes(query));
     }
 
     if (category) {
@@ -1000,15 +984,13 @@ export class ProductListComponent {
 
     if (this.storeState.showOffersOnly()) {
       prods = prods.filter(
-        (p) =>
-          (p.discount || 0) > 0 ||
-          this.inventoryService.offers().some((o) => o.productId === p.id),
+        (p) => (p.discount || 0) > 0 || this.inventoryService.offers().some((o) => o.productId === p.id),
       );
     }
 
     prods.sort((a, b) => {
-      if (sortBy === "price-low") return a.price - b.price;
-      if (sortBy === "price-high") return b.price - a.price;
+      if (sortBy === 'price-low') return a.price - b.price;
+      if (sortBy === 'price-high') return b.price - a.price;
       return a.name.localeCompare(b.name);
     });
 
@@ -1033,9 +1015,9 @@ export class ProductListComponent {
 
   getSortLabel() {
     const sort = this.storeState.sortBy();
-    if (sort === "price-low") return "Price: Low";
-    if (sort === "price-high") return "Price: High";
-    return "Sort: A-Z";
+    if (sort === 'price-low') return 'Price: Low';
+    if (sort === 'price-high') return 'Price: High';
+    return 'Sort: A-Z';
   }
 
   selectCategory(category: string | null) {
@@ -1048,7 +1030,7 @@ export class ProductListComponent {
   }
 
   clearFilters() {
-    this.storeState.setSearchQuery("");
+    this.storeState.setSearchQuery('');
     this.storeState.setCategory(null);
   }
 
@@ -1071,8 +1053,6 @@ export class ProductListComponent {
   }
 
   getProductOffer(productId: number) {
-    return this.inventoryService
-      .offers()
-      .find((o) => o.productId === productId);
+    return this.inventoryService.offers().find((o) => o.productId === productId);
   }
 }

@@ -1,17 +1,12 @@
-import { Component, inject, signal, computed } from "@angular/core";
-import { CommonModule } from "@angular/common";
-import { RouterLink } from "@angular/router";
-import {
-  InventoryDataService,
-  Product,
-  LoaderComponent,
-  TypewriterComponent,
-} from "ui-shared";
-import { WishlistService } from "../../services/wishlist.service";
-import { CartService } from "../../services/cart.service";
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { InventoryDataService, LoaderComponent, type Product, TypewriterComponent } from 'ui-shared';
+import { CartService } from '../../services/cart.service';
+import { WishlistService } from '../../services/wishlist.service';
 
 @Component({
-  selector: "app-store-home",
+  selector: 'app-store-home',
   standalone: true,
   imports: [CommonModule, RouterLink, LoaderComponent, TypewriterComponent],
   template: `
@@ -634,14 +629,14 @@ export class StoreHomeComponent {
     const products = this.inventory.products();
     const cats = [...new Set(products.map((p) => p.category))].slice(0, 6);
     const icons: Record<string, string> = {
-      Electronics: "💻",
-      Office: "📁",
-      Furniture: "🪑",
-      Accessories: "⌚",
-      Kitchen: "🍳",
-      Sports: "⚽",
+      Electronics: '💻',
+      Office: '📁',
+      Furniture: '🪑',
+      Accessories: '⌚',
+      Kitchen: '🍳',
+      Sports: '⚽',
     };
-    return cats.map((name) => ({ name, icon: icons[name] || "📦" }));
+    return cats.map((name) => ({ name, icon: icons[name] || '📦' }));
   });
 
   trendingProducts = computed(() => {
@@ -655,9 +650,7 @@ export class StoreHomeComponent {
   constructor() {
     setInterval(() => {
       if (this.inventory.offers().length > 0) {
-        this.activeOfferIndex.update(
-          (i) => (i + 1) % this.inventory.offers().length,
-        );
+        this.activeOfferIndex.update((i) => (i + 1) % this.inventory.offers().length);
       }
     }, 6000);
   }
