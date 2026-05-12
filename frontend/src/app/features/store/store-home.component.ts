@@ -33,10 +33,10 @@ import { WishlistService } from '../../services/wishlist.service';
           </p>
           <div class="hero-actions">
             <button class="btn-primary" routerLink="/store/categories">
-              Shop Collection
+              <lib-loader label="Shop Collection"></lib-loader>
             </button>
             <button class="btn-secondary" routerLink="/store/offers">
-              View Offers
+              <lib-loader label="View Offers"></lib-loader>
             </button>
           </div>
         </div>
@@ -72,7 +72,7 @@ import { WishlistService } from '../../services/wishlist.service';
                   [routerLink]="['/store/categories']"
                   [queryParams]="{ category: offer.category }"
                 >
-                  Shop Now
+                  <lib-loader label="Shop Now"></lib-loader>
                 </button>
               </div>
               <div class="slide-visual">🎁</div>

@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LoaderComponent } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LoaderComponent],
   template: `
     <div class="shopper-cart-page animate-fade-in">
       <header class="cart-head">
@@ -36,7 +37,7 @@ import { CartService } from '../../services/cart.service';
                 class="remove-btn"
                 (click)="cartService.removeFromCart(item.id)"
               >
-                Remove
+                <lib-loader [label]="'Remove'"></lib-loader>
               </button>
             </div>
 
@@ -91,7 +92,7 @@ import { CartService } from '../../services/cart.service';
               </div>
             </div>
             <button class="btn-checkout" routerLink="/store/checkout">
-              Proceed to Checkout
+              <lib-loader [label]="'Proceed to Checkout'"></lib-loader>
             </button>
             <div class="summary-links">
               <a routerLink="/store">Continue Shopping</a>
@@ -106,7 +107,7 @@ import { CartService } from '../../services/cart.service';
           <h2>Your cart is empty</h2>
           <p>Ready to start shopping? Explore our latest arrivals.</p>
           <button class="btn-checkout !w-auto !px-10" routerLink="/store">
-            Browse Products
+            <lib-loader [label]="'Browse Products'"></lib-loader>
           </button>
         </div>
       </ng-template>

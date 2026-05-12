@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AuthStateService, NotificationService } from 'ui-shared';
+import { AuthStateService, NotificationService, LoaderComponent } from 'ui-shared';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, LoaderComponent],
   template: `
     <div class="shopper-settings animate-fade-in">
       <header class="settings-head">
@@ -81,7 +81,7 @@ import { AuthStateService, NotificationService } from 'ui-shared';
                   class="btn-shopper-primary"
                   [disabled]="profileForm.invalid || loading()"
                 >
-                  {{ loading() ? "Saving..." : "Save Changes" }}
+                  <lib-loader [loading]="loading()" label="Save Changes"></lib-loader>
                 </button>
               </div>
             </form>
@@ -126,7 +126,7 @@ import { AuthStateService, NotificationService } from 'ui-shared';
                   class="btn-shopper-outline"
                   [disabled]="passwordForm.invalid || loading()"
                 >
-                  Update Security
+                  <lib-loader [loading]="loading()" label="Update Security"></lib-loader>
                 </button>
               </div>
             </form>

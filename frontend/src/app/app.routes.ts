@@ -1,10 +1,10 @@
 import type { Routes } from '@angular/router';
-import { StoreLayoutComponent } from './layout/store-layout.component';
+
 
 export const STORE_ROUTES: Routes = [
   {
     path: '',
-    component: StoreLayoutComponent,
+    loadComponent: () => import('./layout/store-layout.component').then((m) => m.StoreLayoutComponent),
     children: [
       {
         path: '',

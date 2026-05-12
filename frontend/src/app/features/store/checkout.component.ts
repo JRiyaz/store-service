@@ -272,10 +272,10 @@ import { CartService } from '../../services/cart.service';
               class="btn-confirm !w-auto !px-10"
               routerLink="/store/orders"
             >
-              View Orders
+              <lib-loader label="View Orders"></lib-loader>
             </button>
             <button class="btn-secondary !w-auto !px-10" routerLink="/store">
-              Back to Store
+              <lib-loader label="Back to Store"></lib-loader>
             </button>
           </div>
         </div>
