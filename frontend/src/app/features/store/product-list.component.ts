@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, HostListener, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, computed, HostListener, inject, type OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { InventoryDataService, LoaderComponent, type Product } from 'ui-shared';
+import { firstValueFrom } from 'rxjs';
+import { InventoryDataService, LoaderComponent, type Offer, type Product } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 import { StoreStateService } from '../../services/store-state.service';
 import { WishlistService } from '../../services/wishlist.service';
@@ -921,7 +923,8 @@ import { WishlistService } from '../../services/wishlist.service';
     `,
   ],
 })
-export class ProductListComponent {
+export class ProductListComponent implements OnInit {
+  private http = inject(HttpClient);
   protected inventoryService = inject(InventoryDataService);
   private cartService = inject(CartService);
   protected storeState = inject(StoreStateService);
@@ -935,6 +938,23 @@ export class ProductListComponent {
 
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+
+  ngOnInit() {
+    this.loadData();
+  }
+
+  async loadData() {
+    try {
+      const [products, offers] = await Promise.all([
+        firstValueFrom(this.http.get<Product[]>(`${this.inventoryService.baseUrl}/products`)),
+        firstValueFrom(this.http.get<Offer[]>(`${this.inventoryService.baseUrl}/offers`)),
+      ]);
+      this.inventoryService.setProducts(products);
+      this.inventoryService.setOffers(offers);
+    } catch (error) {
+      console.error('Error loading product list data:', error);
+    }
+  }
 
   constructor() {
     this.route.url.subscribe(() => this.updateOffersState());

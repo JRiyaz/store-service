@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, computed, inject, type OnInit, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { AuthStateService, InventoryDataService, LoaderComponent, type Offer, type Product } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
@@ -498,13 +500,33 @@ import { CartService } from '../../services/cart.service';
     `,
   ],
 })
-export class ProductDetailComponent {
+export class ProductDetailComponent implements OnInit {
+  private http = inject(HttpClient);
   private route = inject(ActivatedRoute);
   public auth = inject(AuthStateService);
   private inventoryService = inject(InventoryDataService);
   private cartService = inject(CartService);
 
   productId = toSignal(this.route.params.pipe(map((params) => Number(params['id']))));
+
+  ngOnInit() {
+    this.loadData();
+  }
+
+  async loadData() {
+    const id = this.productId();
+    if (!id) return;
+    try {
+      const [product, offers] = await Promise.all([
+        firstValueFrom(this.http.get<Product>(`${this.inventoryService.baseUrl}/products/${id}`)),
+        firstValueFrom(this.http.get<Offer[]>(`${this.inventoryService.baseUrl}/offers?productId=${id}`)),
+      ]);
+      this.inventoryService.updateProductInState(product);
+      this.inventoryService.setOffers(offers);
+    } catch (error) {
+      console.error('Error loading product detail data:', error);
+    }
+  }
 
   product = computed(() => {
     const id = this.productId();
@@ -529,28 +551,30 @@ export class ProductDetailComponent {
     this.isOfferApplied.update((v) => !v);
   }
 
-  updateDiscount(val: string) {
+  async updateDiscount(val: string) {
     const discount = Number(val);
     const existing = this.activePromotion();
 
     if (existing) {
-      this.inventoryService.updateOffer({
-        ...existing,
-        discount,
-      });
+      const updated = { ...existing, discount };
+      const data = await firstValueFrom(
+        this.http.put<Offer>(`${this.inventoryService.baseUrl}/offers/${existing.id}`, updated),
+      );
+      this.inventoryService.updateOfferInState(data);
     } else {
       this.addDefaultDiscount(discount);
     }
   }
 
-  removeDiscount() {
+  async removeDiscount() {
     const existing = this.activePromotion();
     if (existing) {
-      this.inventoryService.deleteOffer(existing.id);
+      await firstValueFrom(this.http.delete(`${this.inventoryService.baseUrl}/offers/${existing.id}`));
+      this.inventoryService.removeOfferFromState(existing.id);
     }
   }
 
-  addDefaultDiscount(discount = 10) {
+  async addDefaultDiscount(discount = 10) {
     const newOffer: Offer = {
       id: `OFFER-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
       title: `${this.product()?.name} Promo`,
@@ -560,7 +584,8 @@ export class ProductDetailComponent {
       expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       color: '#9333ea',
     };
-    this.inventoryService.addOffer(newOffer);
+    const data = await firstValueFrom(this.http.post<Offer>(`${this.inventoryService.baseUrl}/offers`, newOffer));
+    this.inventoryService.addOfferToState(data);
     this.isOfferApplied.set(true);
   }
 

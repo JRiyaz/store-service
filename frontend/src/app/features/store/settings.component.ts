@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AuthStateService, NotificationService, LoaderComponent } from 'ui-shared';
+import { AuthStateService, LoaderComponent, NotificationService } from 'ui-shared';
 
 @Component({
   selector: 'app-settings',

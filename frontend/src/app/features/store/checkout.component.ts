@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthStateService, InventoryDataService, LoaderComponent, NotificationService, type Order } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 
@@ -585,6 +587,7 @@ import { CartService } from '../../services/cart.service';
   ],
 })
 export class CheckoutComponent {
+  private http = inject(HttpClient);
   private fb = inject(FormBuilder);
   private notify = inject(NotificationService);
   cartService = inject(CartService);
@@ -612,34 +615,43 @@ export class CheckoutComponent {
     return control ? control.invalid && control.touched : false;
   }
 
-  processPayment() {
+  async processPayment() {
     if (this.checkoutForm.invalid) {
       this.checkoutForm.markAllAsTouched();
       this.notify.error('Invalid Form', 'Please fill in all required fields correctly.');
       return;
     }
+
     this.processing.set(true);
-    setTimeout(() => {
-      const id = `ORD-${Math.floor(Math.random() * 90000 + 10000)}`;
-      const newOrder: Order = {
-        id,
-        customer: this.authService.user()?.name || 'Guest',
-        status: 'Pending',
-        amount: this.cartService.total(),
-        date: new Date().toISOString().split('T')[0],
-        priority: false,
-        items: this.cartService.items().map((item) => ({
-          productId: item.id,
-          name: item.name,
-          qty: item.quantity,
-          price: item.price,
-        })),
-      };
-      this.inventoryService.addOrder(newOrder);
+
+    const id = `ORD-${Math.floor(Math.random() * 90000 + 10000)}`;
+    const newOrder: Order = {
+      id,
+      customer: this.authService.user()?.name || 'Guest',
+      customerName: this.authService.user()?.name || 'Guest',
+      status: 'Pending',
+      amount: this.cartService.total(),
+      totalAmount: this.cartService.total(),
+      date: new Date().toISOString().split('T')[0],
+      priority: false,
+      items: this.cartService.items().map((item) => ({
+        productId: item.id,
+        name: item.name,
+        qty: item.quantity,
+        price: item.price,
+      })),
+    };
+
+    try {
+      const data = await firstValueFrom(this.http.post<Order>(`${this.inventoryService.baseUrl}/orders`, newOrder));
+      this.inventoryService.addOrderToState(data);
       this.orderId.set(id);
       this.success.set(true);
-      this.processing.set(false);
       this.cartService.clearCart();
-    }, 1000);
+    } catch (error) {
+      console.error('Error submitting order:', error);
+    } finally {
+      this.processing.set(false);
+    }
   }
 }

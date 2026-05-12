@@ -1,6 +1,5 @@
 import type { Routes } from '@angular/router';
 
-
 export const STORE_ROUTES: Routes = [
   {
     path: '',
@@ -9,6 +8,7 @@ export const STORE_ROUTES: Routes = [
       {
         path: '',
         loadComponent: () => import('./features/store/store-home.component').then((m) => m.StoreHomeComponent),
+        pathMatch: 'full',
       },
       {
         path: 'offers',

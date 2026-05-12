@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, computed, inject, type OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { InventoryDataService, LoaderComponent, type Product, TypewriterComponent } from 'ui-shared';
+import { firstValueFrom } from 'rxjs';
+import { InventoryDataService, LoaderComponent, type Offer, type Product, TypewriterComponent } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 import { WishlistService } from '../../services/wishlist.service';
 
@@ -616,8 +618,9 @@ import { WishlistService } from '../../services/wishlist.service';
     `,
   ],
 })
-export class StoreHomeComponent {
+export class StoreHomeComponent implements OnInit {
   inventory = inject(InventoryDataService);
+  http = inject(HttpClient);
   cart = inject(CartService);
   wishlist = inject(WishlistService);
   activeOfferIndex = signal(0);
@@ -647,12 +650,26 @@ export class StoreHomeComponent {
     return this.visibleProductCount() < this.inventory.products().length;
   });
 
-  constructor() {
+  ngOnInit() {
+    this.loadInitialData();
     setInterval(() => {
       if (this.inventory.offers().length > 0) {
         this.activeOfferIndex.update((i) => (i + 1) % this.inventory.offers().length);
       }
     }, 6000);
+  }
+
+  async loadInitialData() {
+    try {
+      const [products, offers] = await Promise.all([
+        firstValueFrom(this.http.get<Product[]>(`${this.inventory.baseUrl}/products`)),
+        firstValueFrom(this.http.get<Offer[]>(`${this.inventory.baseUrl}/offers`)),
+      ]);
+      this.inventory.setProducts(products);
+      this.inventory.setOffers(offers);
+    } catch (error) {
+      console.error('Error loading store data:', error);
+    }
   }
 
   getItemInCart(productId: number) {
