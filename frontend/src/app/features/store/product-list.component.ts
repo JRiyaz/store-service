@@ -434,7 +434,7 @@ import { WishlistService } from '../../services/wishlist.service';
       }
       .option {
         padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
+        font-size: 0.8,em;
         font-weight: 600;
         color: var(--text);
         border-radius: 6px;
@@ -939,8 +939,8 @@ export class ProductListComponent {
   constructor() {
     this.route.url.subscribe(() => this.updateOffersState());
     this.route.queryParams.subscribe((params) => {
-      if (params.category) {
-        this.storeState.setCategory(params.category);
+      if (params['category']) {
+        this.storeState.setCategory(params['category']);
       }
     });
   }

@@ -504,7 +504,7 @@ export class ProductDetailComponent {
   private inventoryService = inject(InventoryDataService);
   private cartService = inject(CartService);
 
-  productId = toSignal(this.route.params.pipe(map((params) => Number(params.id))));
+  productId = toSignal(this.route.params.pipe(map((params) => Number(params['id']))));
 
   product = computed(() => {
     const id = this.productId();
