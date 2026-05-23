@@ -1,91 +1,155 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Component, computed, inject, signal, type OnInit, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AuthStateService, InventoryDataService } from 'ui-shared';
+import { AuthStateService, InventoryDataService, LoaderComponent, SkeletonComponent, type Order } from 'ui-shared';
 
 @Component({
   selector: 'app-orders',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LoaderComponent, SkeletonComponent],
   template: `
     <div class="shopper-orders animate-fade-in">
-      <header class="orders-head">
-        <h1>Orders</h1>
-        <p>You have {{ userOrders().length }} orders in your history.</p>
-      </header>
+      @if (isLoading()) {
+        <header class="orders-head">
+          <h1>Orders</h1>
+          <lib-skeleton width="200px" height="1rem" shape="rounded" customClass="mt-1"></lib-skeleton>
+        </header>
 
-      <div class="stats-row">
-        <div class="stat-box">
-          <span class="l">Total</span>
-          <span class="v">{{ userOrders().length }}</span>
-        </div>
-        <div class="stat-box">
-          <span class="l">Pending</span>
-          <span class="v">{{ pendingCount() }}</span>
-        </div>
-      </div>
-
-      <div class="orders-list" *ngIf="userOrders().length > 0; else noOrders">
-        <div class="order-card shopper-card" *ngFor="let order of userOrders()">
-          <div class="order-info">
-            <div class="id-col">
-              <span class="l">Order #</span>
-              <span class="v">{{ order.id }}</span>
-            </div>
-
-            <div class="meta-row">
-              <div class="m-col">
-                <span class="l">Date</span>
-                <span class="v">{{ order.date }}</span>
-              </div>
-              <div class="m-col">
-                <span class="l">Total</span>
-                <span class="v p">{{ order.amount | currency }}</span>
-              </div>
-            </div>
-
-            <div class="status-col">
-              <span class="status-tag" [attr.data-status]="order.status">{{
-                order.status
-              }}</span>
-            </div>
-
-            <div class="action-col">
-              <button class="btn-detail" (click)="toggleDetails(order.id)">
-                {{ expandedOrderId() === order.id ? "Hide" : "Details" }}
-              </button>
-            </div>
+        <div class="stats-row">
+          <div class="stat-box">
+            <span class="l">Total</span>
+            <lib-skeleton width="45px" height="2rem" shape="rounded" customClass="mt-1"></lib-skeleton>
           </div>
-
-          <div
-            class="order-expand animate-slide-up"
-            *ngIf="expandedOrderId() === order.id"
-          >
-            <div class="item-table">
-              <div class="t-head">
-                <span>Product</span>
-                <span>Qty</span>
-                <span>Price</span>
-              </div>
-              <div class="t-row" *ngFor="let item of order.items">
-                <span class="n">{{ item.name }}</span>
-                <span>{{ item.qty }}</span>
-                <span class="p">{{ item.price | currency }}</span>
-              </div>
-            </div>
+          <div class="stat-box">
+            <span class="l">Pending</span>
+            <lib-skeleton width="45px" height="2rem" shape="rounded" customClass="mt-1"></lib-skeleton>
           </div>
         </div>
-      </div>
 
-      <ng-template #noOrders>
-        <div class="no-orders shopper-card">
-          <div class="icon">📦</div>
-          <h2>No orders yet</h2>
-          <button class="btn-detail !w-auto !px-10" routerLink="/store">
-            Go Shopping
-          </button>
+        <div class="orders-list">
+          @for (x of [1, 2]; track x) {
+            <div class="order-card shopper-card">
+              <div class="order-info">
+                <div class="id-col">
+                  <span class="l">Order #</span>
+                  <lib-skeleton width="80px" height="1.4rem" shape="rounded" customClass="mt-1"></lib-skeleton>
+                </div>
+
+                <div class="meta-row">
+                  <div class="m-col">
+                    <span class="l">Date</span>
+                    <lib-skeleton width="90px" height="1rem" shape="rounded" customClass="mt-1"></lib-skeleton>
+                  </div>
+                  <div class="m-col">
+                    <span class="l">Total</span>
+                    <lib-skeleton width="70px" height="1.1rem" shape="rounded" customClass="mt-1"></lib-skeleton>
+                  </div>
+                </div>
+
+                <div class="status-col">
+                  <lib-skeleton width="85px" height="1.6rem" shape="rounded"></lib-skeleton>
+                </div>
+
+                <div class="action-col">
+                  <lib-skeleton width="70px" height="2rem" shape="rounded"></lib-skeleton>
+                  <lib-skeleton width="70px" height="2rem" shape="rounded" *ngIf="x === 1"></lib-skeleton>
+                </div>
+              </div>
+            </div>
+          }
         </div>
-      </ng-template>
+      } @else {
+        <header class="orders-head">
+          <h1>Orders</h1>
+          <p>You have {{ userOrders().length }} orders in your history.</p>
+        </header>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <span class="l">Total</span>
+            <span class="v">{{ userOrders().length }}</span>
+          </div>
+          <div class="stat-box">
+            <span class="l">Pending</span>
+            <span class="v">{{ pendingCount() }}</span>
+          </div>
+        </div>
+
+        <div class="orders-list" *ngIf="userOrders().length > 0; else noOrders">
+          <div class="order-card shopper-card" *ngFor="let order of userOrders()">
+            <div class="order-info">
+              <div class="id-col">
+                <span class="l">Order #</span>
+                <span class="v">{{ order.id }}</span>
+              </div>
+
+              <div class="meta-row">
+                <div class="m-col">
+                  <span class="l">Date</span>
+                  <span class="v">{{ order.date }}</span>
+                </div>
+                <div class="m-col">
+                  <span class="l">Total</span>
+                  <span class="v p">{{ order.amount | currency }}</span>
+                </div>
+              </div>
+
+              <div class="status-col">
+                <span class="status-tag" [attr.data-status]="order.status">{{
+                  order.status
+                }}</span>
+              </div>
+
+              <div class="action-col">
+                <button class="btn-detail" (click)="toggleDetails(order.id)">
+                  {{ expandedOrderId() === order.id ? "Hide" : "Details" }}
+                </button>
+                <button
+                  *ngIf="order.status === 'Pending'"
+                  class="btn-cancel flex items-center justify-center min-h-[34px] min-w-[70px]"
+                  [disabled]="cancellingOrderId() === order.id"
+                  (click)="$event.stopPropagation(); cancelOrder(order.id)"
+                >
+                  <lib-loader
+                    [loading]="cancellingOrderId() === order.id"
+                    label="Cancel"
+                    customClass="scale-50 !text-white"
+                  ></lib-loader>
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="order-expand animate-slide-up"
+              *ngIf="expandedOrderId() === order.id"
+            >
+              <div class="item-table">
+                <div class="t-head">
+                  <span>Product</span>
+                  <span>Qty</span>
+                  <span>Price</span>
+                </div>
+                <div class="t-row" *ngFor="let item of order.items">
+                  <span class="n">{{ item.name }}</span>
+                  <span>{{ item.qty }}</span>
+                  <span class="p">{{ item.price | currency }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noOrders>
+          <div class="no-orders shopper-card">
+            <div class="icon">📦</div>
+            <h2>No orders yet</h2>
+            <button class="btn-detail !w-auto !px-10" routerLink="/store">
+              Go Shopping
+            </button>
+          </div>
+        </ng-template>
+      }
     </div>
   `,
   styles: [
@@ -152,7 +216,7 @@ import { AuthStateService, InventoryDataService } from 'ui-shared';
 
       .order-info {
         display: grid;
-        grid-template-columns: 140px 1fr 140px 100px;
+        grid-template-columns: 140px 1fr 140px 180px;
         gap: 1.5rem;
         align-items: center;
       }
@@ -209,6 +273,11 @@ import { AuthStateService, InventoryDataService } from 'ui-shared';
         color: #dc2626;
       }
 
+      .action-col {
+        display: flex;
+        gap: 0.5rem;
+      }
+
       .btn-detail {
         background: var(--bg);
         border: 1px solid var(--border);
@@ -222,6 +291,25 @@ import { AuthStateService, InventoryDataService } from 'ui-shared';
       .btn-detail:hover {
         border-color: var(--primary);
         color: var(--primary);
+      }
+
+      .btn-cancel {
+        background: #ef4444;
+        border: none;
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn-cancel:hover {
+        background: #dc2626;
+      }
+      .btn-cancel:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
       }
 
       .order-expand {
@@ -291,10 +379,15 @@ import { AuthStateService, InventoryDataService } from 'ui-shared';
     `,
   ],
 })
-export class OrdersComponent {
+export class OrdersComponent implements OnInit {
+  private http = inject(HttpClient);
   private inventoryService = inject(InventoryDataService);
   private authService = inject(AuthStateService);
+  private destroyRef = inject(DestroyRef);
+
   expandedOrderId = signal<string | null>(null);
+  isLoading = signal(true);
+  cancellingOrderId = signal<string | null>(null);
 
   userOrders = computed(() => {
     const userName = this.authService.user()?.name;
@@ -303,6 +396,40 @@ export class OrdersComponent {
   });
 
   pendingCount = computed(() => this.userOrders().filter((o) => o.status === 'Pending').length);
+
+  ngOnInit() {
+    this.loadOrders();
+  }
+
+  loadOrders() {
+    this.isLoading.set(true);
+    const sub = this.http.get<Order[]>(`${this.inventoryService.baseUrl}/orders`).subscribe({
+      next: (orders) => {
+        this.inventoryService.setOrders(orders);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading orders:', err);
+        this.isLoading.set(false);
+      }
+    });
+    this.destroyRef.onDestroy(() => sub.unsubscribe());
+  }
+
+  cancelOrder(id: string) {
+    this.cancellingOrderId.set(id);
+    this.http.patch<Order>(`${this.inventoryService.baseUrl}/orders/${id}`, { status: 'Cancelled' }).subscribe({
+      next: (updatedOrder) => {
+        this.inventoryService.updateOrderInState(updatedOrder);
+        this.cancellingOrderId.set(null);
+      },
+      error: (err) => {
+        console.error('Error cancelling order:', err);
+        this.cancellingOrderId.set(null);
+      }
+    });
+  }
+
   toggleDetails(id: string) {
     this.expandedOrderId.set(this.expandedOrderId() === id ? null : id);
   }

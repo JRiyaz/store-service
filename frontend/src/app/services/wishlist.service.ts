@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { computed, Injectable, inject, signal } from '@angular/core';
 import { NotificationService, type Product } from 'ui-shared';
 
 @Injectable({
@@ -9,8 +9,10 @@ export class WishlistService {
   private notify = inject(NotificationService);
   items = this._items.asReadonly();
 
+  readonly wishlistIds = computed(() => new Set(this._items().map((item) => item.id)));
+
   toggleWishlist(product: Product) {
-    const exists = this._items().find((i) => i.id === product.id);
+    const exists = this.wishlistIds().has(product.id);
     if (exists) {
       this._items.update((items) => items.filter((i) => i.id !== product.id));
       this.notify.info('Wishlist', `${product.name} removed from favorites.`);
@@ -21,7 +23,7 @@ export class WishlistService {
   }
 
   isInWishlist(productId: number) {
-    return !!this._items().find((i) => i.id === productId);
+    return this.wishlistIds().has(productId);
   }
 
   clearWishlist() {

@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, DestroyRef } from '@angular/core';
 import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+
 import { AuthStateService, InventoryDataService, LoaderComponent, NotificationService, type Order } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 
@@ -597,6 +597,7 @@ export class CheckoutComponent {
   processing = signal(false);
   success = signal(false);
   orderId = signal('');
+  private destroyRef = inject(DestroyRef);
 
   checkoutForm: FormGroup = this.fb.group({
     fullName: [this.authService.user()?.name || '', Validators.required],
@@ -610,12 +611,47 @@ export class CheckoutComponent {
     cvc: ['', [Validators.required, Validators.pattern('^[0-9]{3,4}$')]],
   });
 
+  constructor() {
+    const sub = this.checkoutForm.get('paymentMethod')?.valueChanges.subscribe((method) => {
+      const cardControls = ['cardNumber', 'expiry', 'cvc'];
+      if (method === 'paypal') {
+        for (const controlName of cardControls) {
+          const control = this.checkoutForm.get(controlName);
+          if (control) {
+            control.clearValidators();
+            control.updateValueAndValidity();
+          }
+        }
+      } else {
+        const cardNumber = this.checkoutForm.get('cardNumber');
+        if (cardNumber) {
+          cardNumber.setValidators([Validators.required, Validators.pattern('^[0-9]{16}$')]);
+          cardNumber.updateValueAndValidity();
+        }
+        const expiry = this.checkoutForm.get('expiry');
+        if (expiry) {
+          expiry.setValidators([Validators.required, Validators.pattern('^[0-9]{2}/[0-9]{2}$')]);
+          expiry.updateValueAndValidity();
+        }
+        const cvc = this.checkoutForm.get('cvc');
+        if (cvc) {
+          cvc.setValidators([Validators.required, Validators.pattern('^[0-9]{3,4}$')]);
+          cvc.updateValueAndValidity();
+        }
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      sub?.unsubscribe();
+    });
+  }
+
   isInvalid(controlName: string) {
     const control = this.checkoutForm.get(controlName);
     return control ? control.invalid && control.touched : false;
   }
 
-  async processPayment() {
+  processPayment() {
     if (this.checkoutForm.invalid) {
       this.checkoutForm.markAllAsTouched();
       this.notify.error('Invalid Form', 'Please fill in all required fields correctly.');
@@ -642,16 +678,19 @@ export class CheckoutComponent {
       })),
     };
 
-    try {
-      const data = await firstValueFrom(this.http.post<Order>(`${this.inventoryService.baseUrl}/orders`, newOrder));
-      this.inventoryService.addOrderToState(data);
-      this.orderId.set(id);
-      this.success.set(true);
-      this.cartService.clearCart();
-    } catch (error) {
-      console.error('Error submitting order:', error);
-    } finally {
-      this.processing.set(false);
-    }
+    const sub = this.http.post<Order>(`${this.inventoryService.baseUrl}/orders`, newOrder).subscribe({
+      next: (data) => {
+        this.inventoryService.addOrderToState(data);
+        this.orderId.set(id);
+        this.success.set(true);
+        this.cartService.clearCart();
+        this.processing.set(false);
+      },
+      error: (error) => {
+        console.error('Error submitting order:', error);
+        this.processing.set(false);
+      }
+    });
+    this.destroyRef.onDestroy(() => sub.unsubscribe());
   }
 }

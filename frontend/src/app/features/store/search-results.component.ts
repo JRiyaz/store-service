@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { InventoryDataService } from 'ui-shared';
+import { Component, computed, inject, signal, DestroyRef } from '@angular/core';
+import { RouterLink, ActivatedRoute } from '@angular/router';
+import { InventoryDataService, SearchService } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 import { StoreStateService } from '../../services/store-state.service';
 import { WishlistService } from '../../services/wishlist.service';
@@ -250,23 +250,57 @@ import { WishlistService } from '../../services/wishlist.service';
   ],
 })
 export class SearchResultsComponent {
-  private inventory = inject(InventoryDataService);
-  private state = inject(StoreStateService);
+  private route = inject(ActivatedRoute);
+  private searchService = inject(SearchService);
   cart = inject(CartService);
   wishlist = inject(WishlistService);
 
-  query = computed(() => this.state.searchQuery());
+  query = signal('');
+  isLoading = signal(false);
+  searchResults = signal<any[]>([]);
 
   filteredProducts = computed(() => {
-    const q = this.query().toLowerCase();
-    if (!q) return [];
-    return this.inventory
-      .products()
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.description.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q),
-      );
+    return this.searchResults()
+      .map((item) => item.product)
+      .filter((p) => !!p);
   });
+
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+    let searchSub: any = null;
+
+    const routeSub = this.route.queryParams.subscribe((params) => {
+      const q = params['q'] || '';
+      this.query.set(q);
+
+      if (searchSub) {
+        searchSub.unsubscribe();
+      }
+
+      if (!q.trim()) {
+        this.searchResults.set([]);
+        return;
+      }
+
+      this.isLoading.set(true);
+      searchSub = this.searchService.search(q).subscribe({
+        next: (results) => {
+          this.searchResults.set(results);
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          console.error('[SearchResults] Search failed:', err);
+          this.searchResults.set([]);
+          this.isLoading.set(false);
+        },
+      });
+    });
+
+    destroyRef.onDestroy(() => {
+      routeSub.unsubscribe();
+      if (searchSub) {
+        searchSub.unsubscribe();
+      }
+    });
+  }
 }

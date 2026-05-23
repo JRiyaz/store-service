@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, type ElementRef, HostListener, inject, signal, ViewChild } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
+import { map } from 'rxjs/operators';
 import { filter } from 'rxjs/operators';
 import {
   AuthStateService,
@@ -8,6 +10,8 @@ import {
   DarkModeService,
   FaviconService,
   MobileBottomNavComponent,
+  SearchService,
+  InventoryDataService,
 } from 'ui-shared';
 import { CartService } from '../services/cart.service';
 import { CartUiService } from '../services/cart-ui.service';
@@ -613,7 +617,9 @@ export class StoreLayoutComponent {
   darkMode = inject(DarkModeService);
   wishlist = inject(WishlistService);
   cartUi = inject(CartUiService);
-  private storeState = inject(StoreStateService);
+  private searchService = inject(SearchService);
+  private http = inject(HttpClient);
+  private inventoryService = inject(InventoryDataService);
   private router = inject(Router);
   private faviconService = inject(FaviconService);
 
@@ -626,6 +632,27 @@ export class StoreLayoutComponent {
         this.isSearchOpen.set(false);
       }
       this.isDropdownOpen.set(false);
+    });
+
+    // Register storefront catalog search provider
+    this.searchService.registerProvider({
+      id: 'store-products',
+      name: 'Storefront',
+      search: (q: string) => {
+        return this.http.get<any[]>(`${this.inventoryService.baseUrl}/products`).pipe(
+          map((products) => products
+            .filter((p) => p.name.toLowerCase().includes(q.toLowerCase()) || p.description.toLowerCase().includes(q.toLowerCase()))
+            .map((p) => ({
+              id: p.id.toString(),
+              title: p.name,
+              path: `/store/product/${p.id}`,
+              category: 'Products',
+              keywords: [p.category],
+              product: p
+            }))
+          )
+        );
+      }
     });
   }
 
@@ -693,9 +720,6 @@ export class StoreLayoutComponent {
 
   onSearch(event: Event) {
     const query = (event.target as HTMLInputElement).value;
-    this.storeState.setSearchQuery(query);
-    if (this.router.url !== '/store/search') {
-      this.router.navigate(['/store/search']);
-    }
+    this.router.navigate(['/store/search'], { queryParams: { q: query } });
   }
 }

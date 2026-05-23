@@ -1,208 +1,264 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, type OnInit, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, type OnInit, signal, DestroyRef, effect } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { AuthStateService, InventoryDataService, LoaderComponent, type Offer, type Product } from 'ui-shared';
+import { forkJoin } from 'rxjs';
+import { AuthStateService, InventoryDataService, LoaderComponent, SkeletonComponent, type Offer, type Product } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, LoaderComponent],
+  imports: [CommonModule, RouterLink, LoaderComponent, SkeletonComponent],
   template: `
-    <div
-      class="shopper-detail animate-fade-in"
-      *ngIf="product(); else notFound"
-    >
-      <nav class="bread">
-        <a routerLink="/store">Store</a>
-        <span>/</span>
-        <a
-          routerLink="/store"
-          [queryParams]="{ category: product()?.category }"
-          >{{ product()?.category }}</a
-        >
-        <span>/</span>
-        <span class="curr">{{ product()?.name }}</span>
-      </nav>
+    <div class="shopper-detail animate-fade-in">
+      @if (isLoading()) {
+        <!-- Breadcrumbs Skeleton -->
+        <nav class="bread">
+          <lib-skeleton width="250px" height="1.2rem" shape="rounded"></lib-skeleton>
+        </nav>
 
-      <div class="detail-grid">
-        <!-- Left: Image -->
-        <div class="visual-col">
-          <div class="main-img">
-            <span>📦</span>
+        <div class="detail-grid">
+          <!-- Left: Image Skeleton -->
+          <div class="visual-col">
+            <div class="main-img flex items-center justify-center bg-slate-50 dark:bg-white/5 h-[400px] rounded-2xl">
+              <lib-skeleton width="96px" height="96px" shape="rounded"></lib-skeleton>
+            </div>
+            <div class="thumbs flex gap-4 mt-4">
+              <div class="thumb active" style="width: 80px; height: 80px;"><lib-skeleton width="100%" height="100%" shape="rounded"></lib-skeleton></div>
+              <div class="thumb" style="width: 80px; height: 80px;"><lib-skeleton width="100%" height="100%" shape="rounded"></lib-skeleton></div>
+              <div class="thumb" style="width: 80px; height: 80px;"><lib-skeleton width="100%" height="100%" shape="rounded"></lib-skeleton></div>
+            </div>
           </div>
-          <div class="thumbs">
-            <div class="thumb active"><span>📦</span></div>
-            <div class="thumb"><span>📦</span></div>
-            <div class="thumb"><span>📦</span></div>
+
+          <!-- Right: Info Skeleton -->
+          <div class="info-col">
+            <div class="info-head flex flex-col gap-2 mb-4">
+              <lib-skeleton width="80px" height="1rem" shape="rounded"></lib-skeleton>
+              <lib-skeleton width="90%" height="2.5rem" shape="rounded"></lib-skeleton>
+              <div class="meta flex items-center gap-4 mt-2">
+                <lib-skeleton width="110px" height="1.2rem" shape="rounded"></lib-skeleton>
+                <lib-skeleton width="80px" height="1.6rem" shape="rounded"></lib-skeleton>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <lib-skeleton width="100%" height="1.2rem" shape="rounded" customClass="mb-2"></lib-skeleton>
+              <lib-skeleton width="95%" height="1.2rem" shape="rounded" customClass="mb-2"></lib-skeleton>
+              <lib-skeleton width="60%" height="1.2rem" shape="rounded"></lib-skeleton>
+            </div>
+
+            <div class="action-box p-6 bg-slate-50 dark:bg-white/5 rounded-2xl flex flex-col gap-4">
+              <lib-skeleton width="100px" height="1.2rem" shape="rounded"></lib-skeleton>
+              <div class="flex gap-4 items-center">
+                <div style="width: 160px; height: 44px;">
+                  <lib-skeleton width="100%" height="100%" shape="rounded"></lib-skeleton>
+                </div>
+                <lib-skeleton width="44px" height="44px" shape="rounded"></lib-skeleton>
+              </div>
+            </div>
+
+            <div class="tabs mt-8">
+              <div class="tab-item">
+                <lib-skeleton width="120px" height="1.5rem" shape="rounded" customClass="mb-4"></lib-skeleton>
+                <ul class="spec-list">
+                  @for (x of [1, 2, 3]; track x) {
+                    <li class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/5">
+                      <lib-skeleton width="80px" height="1rem" shape="rounded"></lib-skeleton>
+                      <lib-skeleton width="100px" height="1rem" shape="rounded"></lib-skeleton>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
+      } @else if (product()) {
+        <nav class="bread">
+          <a routerLink="/store">Store</a>
+          <span>/</span>
+          <a
+            routerLink="/store"
+            [queryParams]="{ category: product()?.category }"
+            >{{ product()?.category }}</a
+          >
+          <span>/</span>
+          <span class="curr">{{ product()?.name }}</span>
+        </nav>
 
-        <!-- Right: Info -->
-        <div class="info-col">
-          <div class="info-head">
-            <span class="cat">{{ product()?.category }}</span>
-            <h1>{{ product()?.name }}</h1>
-            <div class="meta">
-              <div class="stars">★★★★★ <span>(12)</span></div>
-              <div class="price-wrapper flex items-baseline gap-3 relative">
-                <div
-                  class="price transition-all duration-300"
-                  [class.discounted]="activePromotion() && isOfferApplied()"
-                >
-                  {{
-                    (activePromotion() && isOfferApplied()
-                      ? (product()?.price || 0) *
-                        (1 - activePromotion()!.discount / 100)
-                      : product()?.price
-                    ) | currency
-                  }}
-                </div>
-                @if (activePromotion() && isOfferApplied()) {
+        <div class="detail-grid">
+          <!-- Left: Image -->
+          <div class="visual-col">
+            <div class="main-img">
+              <span>📦</span>
+            </div>
+            <div class="thumbs">
+              <div class="thumb active"><span>📦</span></div>
+              <div class="thumb"><span>📦</span></div>
+              <div class="thumb"><span>📦</span></div>
+            </div>
+          </div>
+
+          <!-- Right: Info -->
+          <div class="info-col">
+            <div class="info-head">
+              <span class="cat">{{ product()?.category }}</span>
+              <h1>{{ product()?.name }}</h1>
+              <div class="meta">
+                <div class="stars">★★★★★ <span>(12)</span></div>
+                <div class="price-wrapper flex items-baseline gap-3 relative">
                   <div
-                    class="original-price text-sm text-slate-400 line-through font-bold animate-fade-in"
+                    class="price transition-all duration-300"
+                    [class.discounted]="activePromotion() && isOfferApplied()"
                   >
-                    {{ product()?.price | currency }}
+                    {{
+                      (activePromotion() && isOfferApplied()
+                        ? (product()?.price || 0) *
+                          (1 - activePromotion()!.discount / 100)
+                        : product()?.price
+                      ) | currency
+                    }}
                   </div>
-                }
-              </div>
-            </div>
-          </div>
-
-          <p class="desc">{{ product()?.description }}</p>
-
-          <div class="action-box">
-            <div class="stock" [class.low]="(product()?.stock || 0) < 10">
-              <span class="dot"></span>
-              {{ (product()?.stock || 0) > 0 ? "In Stock" : "Out of Stock" }}
-            </div>
-
-            <!-- Interactive Offer Selection -->
-            @if (activePromotion()) {
-              <div
-                class="offer-selection-area mb-4 p-4 bg-primary/5 rounded-xl border border-primary/10 relative overflow-hidden group"
-              >
-                <div class="flex items-center justify-between relative z-10">
-                  <div class="flex items-center gap-3">
+                  @if (activePromotion() && isOfferApplied()) {
                     <div
-                      class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary text-xs font-black"
+                      class="original-price text-sm text-slate-400 line-through font-bold animate-fade-in"
                     >
-                      %
+                      {{ product()?.price | currency }}
                     </div>
-                    <div>
-                      <p
-                        class="text-[10px] font-black text-slate-400 uppercase tracking-widest"
-                      >
-                        Available Offer
-                      </p>
-                      <p
-                        class="text-xs font-black text-slate-900 dark:text-white"
-                      >
-                        {{ activePromotion()?.discount }}% Special Discount
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    (click)="toggleOffer()"
-                    class="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all"
-                    [class.bg-primary]="!isOfferApplied()"
-                    [class.text-white]="!isOfferApplied()"
-                    [class.text-rose-500]="isOfferApplied()"
-                    [class.hover:bg-rose-500/10]="isOfferApplied()"
-                  >
-                    {{ isOfferApplied() ? "Remove" : "Apply" }}
-                  </button>
+                  }
                 </div>
-
-                <!-- Sprinkles Animation Layer -->
-                @if (isAnimatingSprinkles()) {
-                  <div class="sprinkles-container">
-                    @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
-                      <div class="sprinkle" [style.--i]="i"></div>
-                    }
-                  </div>
-                }
               </div>
-            }
-
-            <div class="actions">
-              <ng-container
-                *ngIf="getItemInCart(product()!.id) as item; else addBtn"
-              >
-                <div class="stepper">
-                  <button (click)="updateQty(product()!.id, item.quantity - 1)">
-                    −
-                  </button>
-                  <span class="val">{{ item.quantity }}</span>
-                  <button (click)="updateQty(product()!.id, item.quantity + 1)">
-                    +
-                  </button>
-                </div>
-              </ng-container>
-
-              <ng-template #addBtn>
-                <button
-                  class="btn-primary flex items-center justify-center min-h-[44px]"
-                  (click)="addToCart(product()!)"
-                  [disabled]="isAddingToCart()"
-                >
-                  <lib-loader
-                    [loading]="isAddingToCart()"
-                    label="Add to Cart"
-                    customClass="!text-white"
-                  ></lib-loader>
-                </button>
-              </ng-template>
-
-              <button class="btn-wish">
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path
-                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                  ></path>
-                </svg>
-              </button>
             </div>
-          </div>
-          <div class="tabs mt-8">
-            <div class="tab-item">
-              <h3
-                class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4"
-              >
-                Specifications
-              </h3>
-              <ul class="spec-list">
-                <li><span>Material</span> Industrial Polymer</li>
-                <li><span>Weight</span> 1.2 kg</li>
-                <li><span>Warranty</span> 1 Year</li>
-              </ul>
+
+            <p class="desc">{{ product()?.description }}</p>
+
+            <div class="action-box">
+              <div class="stock" [class.low]="(product()?.stock || 0) < 10">
+                <span class="dot"></span>
+                {{ (product()?.stock || 0) > 0 ? "In Stock" : "Out of Stock" }}
+              </div>
+
+              <!-- Interactive Offer Selection -->
+              @if (activePromotion()) {
+                <div
+                  class="offer-selection-area mb-4 p-4 bg-primary/5 rounded-xl border border-primary/10 relative overflow-hidden group"
+                >
+                  <div class="flex items-center justify-between relative z-10">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary text-xs font-black"
+                      >
+                        %
+                      </div>
+                      <div>
+                        <p
+                          class="text-[10px] font-black text-slate-400 uppercase tracking-widest"
+                        >
+                          Available Offer
+                        </p>
+                        <p
+                          class="text-xs font-black text-slate-900 dark:text-white"
+                        >
+                          {{ activePromotion()?.discount }}% Special Discount
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      (click)="toggleOffer()"
+                      class="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg transition-all"
+                      [class.bg-primary]="!isOfferApplied()"
+                      [class.text-white]="!isOfferApplied()"
+                      [class.text-rose-500]="isOfferApplied()"
+                      [class.hover:bg-rose-500/10]="isOfferApplied()"
+                    >
+                      {{ isOfferApplied() ? "Remove" : "Apply" }}
+                    </button>
+                  </div>
+
+                  <!-- Sprinkles Animation Layer -->
+                  @if (isAnimatingSprinkles()) {
+                    <div class="sprinkles-container">
+                      @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+                        <div class="sprinkle" [style.--i]="i"></div>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="actions">
+                <ng-container
+                  *ngIf="getItemInCart(product()!.id) as item; else addBtn"
+                >
+                  <div class="stepper">
+                    <button (click)="updateQty(product()!.id, item.quantity - 1)">
+                      −
+                    </button>
+                    <span class="val">{{ item.quantity }}</span>
+                    <button (click)="updateQty(product()!.id, item.quantity + 1)">
+                      +
+                    </button>
+                  </div>
+                </ng-container>
+
+                <ng-template #addBtn>
+                  <button
+                    class="btn-primary flex items-center justify-center min-h-[44px]"
+                    (click)="addToCart(product()!)"
+                    [disabled]="isAddingToCart()"
+                  >
+                    <lib-loader
+                      [loading]="isAddingToCart()"
+                      label="Add to Cart"
+                      customClass="!text-white"
+                    ></lib-loader>
+                  </button>
+                </ng-template>
+
+                <button class="btn-wish">
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                    ></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="tabs mt-8">
+              <div class="tab-item">
+                <h3
+                  class="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4"
+                >
+                  Specifications
+                </h3>
+                <ul class="spec-list">
+                  <li><span>Material</span> Industrial Polymer</li>
+                  <li><span>Weight</span> 1.2 kg</li>
+                  <li><span>Warranty</span> 1 Year</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      } @else {
+        <div class="not-found">
+          <h2>Product not found</h2>
+          <button class="btn-primary !w-auto !px-10" routerLink="/store">
+            Return to Store
+          </button>
+        </div>
+      }
     </div>
-
-    <ng-template #notFound>
-      <div class="not-found" *ngIf="!loading()">
-        <h2>Product not found</h2>
-        <button class="btn-primary !w-auto !px-10" routerLink="/store">
-          Return to Store
-        </button>
-      </div>
-    </ng-template>
   `,
   styles: [
     `
@@ -507,34 +563,57 @@ export class ProductDetailComponent implements OnInit {
   private inventoryService = inject(InventoryDataService);
   private cartService = inject(CartService);
 
-  productId = toSignal(this.route.params.pipe(map((params) => Number(params['id']))));
+  productId = signal<number | null>(null);
+  isLoading = signal(true);
+  private destroyRef = inject(DestroyRef);
 
-  ngOnInit() {
-    this.loadData();
+  constructor() {
+    const sub = this.route.params.subscribe((params) => {
+      const newId = Number(params['id']);
+      this.productId.set(newId);
+    });
+    this.destroyRef.onDestroy(() => sub.unsubscribe());
+
+    effect(() => {
+      const id = this.productId();
+      if (id) {
+        this.loadData(id);
+      }
+    });
   }
 
-  async loadData() {
-    const id = this.productId();
-    if (!id) return;
-    try {
-      const [product, offers] = await Promise.all([
-        firstValueFrom(this.http.get<Product>(`${this.inventoryService.baseUrl}/products/${id}`)),
-        firstValueFrom(this.http.get<Offer[]>(`${this.inventoryService.baseUrl}/offers?productId=${id}`)),
-      ]);
-      this.inventoryService.updateProductInState(product);
-      this.inventoryService.setOffers(offers);
-    } catch (error) {
-      console.error('Error loading product detail data:', error);
-    }
+  ngOnInit() {
+    // Initial data loading handled reactively by effect() in constructor
+  }
+
+  loadData(id: number) {
+    this.isLoading.set(true);
+    const sub = forkJoin([
+      this.http.get<Product>(`${this.inventoryService.baseUrl}/products/${id}`),
+      this.http.get<Offer[]>(`${this.inventoryService.baseUrl}/offers?productId=${id}`)
+    ]).subscribe({
+      next: ([product, offers]) => {
+        this.inventoryService.updateProductInState(product);
+        this.inventoryService.setOffers(offers);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading product detail data:', err);
+        this.isLoading.set(false);
+      }
+    });
+    this.destroyRef.onDestroy(() => sub.unsubscribe());
   }
 
   product = computed(() => {
     const id = this.productId();
+    if (!id) return undefined;
     return this.inventoryService.products().find((p) => p.id === id);
   });
 
   activePromotion = computed(() => {
     const id = this.productId();
+    if (!id) return undefined;
     const offers = this.inventoryService.offers();
     return offers.find((o) => o.productId === id);
   });
@@ -551,49 +630,64 @@ export class ProductDetailComponent implements OnInit {
     this.isOfferApplied.update((v) => !v);
   }
 
-  async updateDiscount(val: string) {
+  updateDiscount(val: string) {
     const discount = Number(val);
     const existing = this.activePromotion();
 
     if (existing) {
       const updated = { ...existing, discount };
-      const data = await firstValueFrom(
-        this.http.put<Offer>(`${this.inventoryService.baseUrl}/offers/${existing.id}`, updated),
-      );
-      this.inventoryService.updateOfferInState(data);
+      this.http.put<Offer>(`${this.inventoryService.baseUrl}/offers/${existing.id}`, updated)
+        .subscribe({
+          next: (data) => {
+            this.inventoryService.updateOfferInState(data);
+          },
+          error: (err) => console.error('Error updating discount:', err)
+        });
     } else {
       this.addDefaultDiscount(discount);
     }
   }
 
-  async removeDiscount() {
+  removeDiscount() {
     const existing = this.activePromotion();
     if (existing) {
-      await firstValueFrom(this.http.delete(`${this.inventoryService.baseUrl}/offers/${existing.id}`));
-      this.inventoryService.removeOfferFromState(existing.id);
+      this.http.delete(`${this.inventoryService.baseUrl}/offers/${existing.id}`)
+        .subscribe({
+          next: () => {
+            this.inventoryService.removeOfferFromState(existing.id);
+          },
+          error: (err) => console.error('Error removing discount:', err)
+        });
     }
   }
 
-  async addDefaultDiscount(discount = 10) {
+  addDefaultDiscount(discount = 10) {
+    const pId = this.product()?.id;
+    if (!pId) return;
     const newOffer: Offer = {
       id: `OFFER-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
       title: `${this.product()?.name} Promo`,
       description: `Storefront promotion`,
       discount,
-      productId: this.product()?.id,
+      productId: pId,
       expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       color: '#9333ea',
     };
-    const data = await firstValueFrom(this.http.post<Offer>(`${this.inventoryService.baseUrl}/offers`, newOffer));
-    this.inventoryService.addOfferToState(data);
-    this.isOfferApplied.set(true);
+    this.http.post<Offer>(`${this.inventoryService.baseUrl}/offers`, newOffer)
+      .subscribe({
+        next: (data) => {
+          this.inventoryService.addOfferToState(data);
+          this.isOfferApplied.set(true);
+        },
+        error: (err) => console.error('Error adding discount:', err)
+      });
   }
 
-  loading = computed(() => !this.product() && this.inventoryService.loading());
+  loading = computed(() => !this.product() && this.isLoading());
   isAddingToCart = signal(false);
 
   getItemInCart(productId: number) {
-    return this.cartService.items().find((i) => i.id === productId);
+    return this.cartService.itemsMap().get(productId);
   }
   addToCart(product: Product) {
     this.isAddingToCart.set(true);

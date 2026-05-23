@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, HostListener, inject, type OnInit, signal } from '@angular/core';
+import { Component, computed, HostListener, inject, type OnInit, signal, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { InventoryDataService, LoaderComponent, type Offer, type Product } from 'ui-shared';
+import { forkJoin } from 'rxjs';
+import { InventoryDataService, LoaderComponent, SkeletonComponent, type Offer, type Product } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 import { StoreStateService } from '../../services/store-state.service';
 import { WishlistService } from '../../services/wishlist.service';
@@ -11,280 +11,360 @@ import { WishlistService } from '../../services/wishlist.service';
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, LoaderComponent],
+  imports: [CommonModule, RouterLink, LoaderComponent, SkeletonComponent],
   template: `
     <div class="shopper-products-page animate-fade-in">
-      <!-- Compact Sidebar -->
-      <aside class="shopper-sidebar">
-        <div class="sidebar-section">
-          <h3>Categories</h3>
-          <ul class="cat-list">
-            <li
-              [class.active]="!storeState.selectedCategory()"
-              (click)="selectCategory(null)"
-            >
-              All <span>{{ inventoryService.products().length }}</span>
-            </li>
-            <li
-              *ngFor="let cat of categories()"
-              [class.active]="storeState.selectedCategory() === cat"
-              (click)="selectCategory(cat)"
-            >
-              {{ cat }} <span>{{ getCategoryCount(cat) }}</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="sidebar-section">
-          <h3>Price</h3>
-          <div class="price-opts">
-            <label class="check-opt"
-              ><input type="checkbox" /> Under $100</label
-            >
-            <label class="check-opt"
-              ><input type="checkbox" /> $100 - $500</label
-            >
-            <label class="check-opt"><input type="checkbox" /> Over $500</label>
-          </div>
-        </div>
-
-        <div class="sidebar-section">
-          <h3>Size</h3>
-          <div class="size-grid">
-            <button class="size-btn">S</button>
-            <button class="size-btn active">M</button>
-            <button class="size-btn">L</button>
-            <button class="size-btn">XL</button>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Mobile Filter Drawer -->
-      <div class="mobile-filter-drawer" [class.open]="isMobileFilterOpen()">
-        <div
-          class="drawer-backdrop"
-          (click)="isMobileFilterOpen.set(false)"
-        ></div>
-        <div class="drawer-content animate-slide-up">
-          <div class="drawer-header">
-            <h3>Filters</h3>
-            <button (click)="isMobileFilterOpen.set(false)">✕</button>
-          </div>
-          <div class="drawer-body">
-            <!-- Reuse sidebar sections or similar -->
-            <div class="sidebar-section">
-              <h3>Categories</h3>
-              <ul class="cat-list">
-                <li
-                  [class.active]="!storeState.selectedCategory()"
-                  (click)="selectCategory(null); isMobileFilterOpen.set(false)"
-                >
-                  All <span>{{ inventoryService.products().length }}</span>
+      @if (isLoading()) {
+        <!-- Compact Sidebar Skeleton -->
+        <aside class="shopper-sidebar w-[210px] shrink-0">
+          <div class="sidebar-section">
+            <lib-skeleton width="120px" height="1.6rem" shape="rounded" customClass="mb-4"></lib-skeleton>
+            <ul class="cat-list">
+              @for (x of [1, 2, 3, 4, 5]; track x) {
+                <li class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-white/5">
+                  <lib-skeleton width="80px" height="1rem" shape="rounded"></lib-skeleton>
+                  <lib-skeleton width="24px" height="1rem" shape="rounded"></lib-skeleton>
                 </li>
-                <li
-                  *ngFor="let cat of categories()"
-                  [class.active]="storeState.selectedCategory() === cat"
-                  (click)="selectCategory(cat); isMobileFilterOpen.set(false)"
-                >
-                  {{ cat }} <span>{{ getCategoryCount(cat) }}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Floating Filter FAB (Mobile Only) -->
-      <button
-        class="filter-fab sm:hidden"
-        (click)="isMobileFilterOpen.set(true)"
-      >
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2.5"
-            d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
-          ></path>
-        </svg>
-        <span>Filters</span>
-      </button>
-
-      <!-- Main Content -->
-      <div class="shopper-content">
-        <!-- Compact Header -->
-        <header class="content-header">
-          <div class="h-left">
-            <h1>
-              {{
-                storeState.showOffersOnly()
-                  ? "Current Offers"
-                  : storeState.selectedCategory() || "All Products"
-              }}
-            </h1>
-            <p class="results-count">
-              {{ filteredProducts().length }} items found
-            </p>
+              }
+            </ul>
           </div>
 
-          <div class="h-right">
-            <div
-              class="sort-wrap"
-              (click)="$event.stopPropagation(); toggleSort()"
-            >
-              <button class="sort-btn">
-                <span>{{ getSortLabel() }}</span>
-                <span class="chev">▾</span>
-              </button>
-              <div class="sort-menu" *ngIf="isSortOpen()">
-                <div class="option" (click)="selectSort('name')">Name: A-Z</div>
-                <div class="option" (click)="selectSort('price-low')">
-                  Price: Low
-                </div>
-                <div class="option" (click)="selectSort('price-high')">
-                  Price: High
-                </div>
+          <div class="sidebar-section mt-6">
+            <lib-skeleton width="100px" height="1.6rem" shape="rounded" customClass="mb-4"></lib-skeleton>
+            <div class="price-opts flex flex-col gap-3">
+              <div class="flex items-center gap-2">
+                <lib-skeleton width="18px" height="18px" shape="rounded"></lib-skeleton>
+                <lib-skeleton width="80px" height="1rem" shape="rounded"></lib-skeleton>
+              </div>
+              <div class="flex items-center gap-2">
+                <lib-skeleton width="18px" height="18px" shape="rounded"></lib-skeleton>
+                <lib-skeleton width="90px" height="1rem" shape="rounded"></lib-skeleton>
+              </div>
+              <div class="flex items-center gap-2">
+                <lib-skeleton width="18px" height="18px" shape="rounded"></lib-skeleton>
+                <lib-skeleton width="75px" height="1rem" shape="rounded"></lib-skeleton>
               </div>
             </div>
           </div>
-        </header>
 
-        <!-- Tight Grid (3-4 columns) -->
-        <div class="shopper-grid">
-          <div
-            class="product-card animate-item-in"
-            *ngFor="let product of visibleProducts(); let i = index"
-            [style.animation-delay]="(i % 4) * 0.1 + 's'"
-          >
-            <div
-              class="card-visual"
-              [routerLink]="['/store/product', product.id]"
-            >
-              <div class="img-bg">
-                <span class="icon">📦</span>
-              </div>
-              <div class="card-badge" *ngIf="product.stock < 10">Low</div>
-              <div class="offer-tag" *ngIf="getProductOffer(product.id)">
-                Sale
-              </div>
+          <div class="sidebar-section mt-6">
+            <lib-skeleton width="80px" height="1.6rem" shape="rounded" customClass="mb-4"></lib-skeleton>
+            <div class="size-grid flex gap-2">
+              <lib-skeleton width="36px" height="36px" shape="rounded"></lib-skeleton>
+              <lib-skeleton width="36px" height="36px" shape="rounded"></lib-skeleton>
+              <lib-skeleton width="36px" height="36px" shape="rounded"></lib-skeleton>
+              <lib-skeleton width="36px" height="36px" shape="rounded"></lib-skeleton>
+            </div>
+          </div>
+        </aside>
 
-              <button
-                class="heart-btn"
-                [class.active]="wishlist.isInWishlist(product.id)"
-                (click)="
-                  $event.stopPropagation(); wishlist.toggleWishlist(product)
-                "
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path
-                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                  ></path>
-                </svg>
-              </button>
+        <!-- Main Content Skeleton -->
+        <div class="shopper-content">
+          <header class="content-header flex justify-between items-center mb-6">
+            <div>
+              <lib-skeleton width="220px" height="2.5rem" shape="rounded" customClass="mb-2"></lib-skeleton>
+              <lib-skeleton width="120px" height="1rem" shape="rounded"></lib-skeleton>
+            </div>
+            <lib-skeleton width="140px" height="2.5rem" shape="rounded"></lib-skeleton>
+          </header>
 
-              <!-- Compact Hover Actions -->
-              <div class="card-hover-actions">
-                <ng-container
-                  *ngIf="getItemInCart(product.id) as item; else addBtn"
-                >
-                  <div class="pill-stepper" (click)="$event.stopPropagation()">
-                    <button (click)="updateQty(product.id, item.quantity - 1)">
-                      −
-                    </button>
-                    <span class="val">{{ item.quantity }}</span>
-                    <button (click)="updateQty(product.id, item.quantity + 1)">
-                      +
-                    </button>
+          <div class="shopper-grid grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            @for (x of [1, 2, 3, 4, 5, 6]; track x) {
+              <div class="product-card bg-slate-50 dark:bg-white/5 rounded-xl p-4 flex flex-col gap-4">
+                <div class="card-visual h-60 bg-slate-100 dark:bg-white/10 rounded-lg flex items-center justify-center relative">
+                  <lib-skeleton width="70px" height="70px" shape="rounded"></lib-skeleton>
+                  <div class="absolute top-4 right-4">
+                    <lib-skeleton width="32px" height="32px" shape="circle"></lib-skeleton>
                   </div>
-                </ng-container>
-                <ng-template #addBtn>
-                  <button
-                    class="pill-btn add flex items-center justify-center min-w-[100px] min-h-[32px]"
-                    (click)="$event.stopPropagation(); addToCart(product)"
-                    [disabled]="isAddingProduct() === product.id"
-                  >
-                    <lib-loader
-                      [loading]="isAddingProduct() === product.id"
-                      [label]="
-                        isAddingProduct() === product.id ? '' : 'Add to Cart'
-                      "
-                      customClass="scale-75"
-                    ></lib-loader>
-                  </button>
-                </ng-template>
-              </div>
-            </div>
-
-            <div class="card-info">
-              <div class="info-top">
-                <span class="category">{{ product.category }}</span>
-                <span class="stars">★ 4.8</span>
-              </div>
-              <h3 class="name" [routerLink]="['/store/product', product.id]">
-                {{ product.name }}
-              </h3>
-              <div class="info-bottom">
-                <div class="flex items-baseline gap-2">
-                  <span
-                    class="price"
-                    [class.text-rose-500]="getProductOffer(product.id)"
-                  >
-                    {{
-                      (getProductOffer(product.id)
-                        ? product.price *
-                          (1 - getProductOffer(product.id)!.discount / 100)
-                        : product.price
-                      ) | currency
-                    }}
-                  </span>
-                  @if (getProductOffer(product.id)) {
-                    <span
-                      class="original text-[10px] text-slate-400 line-through font-bold"
-                    >
-                      {{ product.price | currency }}
-                    </span>
-                  }
                 </div>
+                <div class="flex flex-col gap-2 p-2">
+                  <div class="flex justify-between items-center">
+                    <lib-skeleton width="60px" height="0.8rem" shape="rounded"></lib-skeleton>
+                    <lib-skeleton width="40px" height="0.8rem" shape="rounded"></lib-skeleton>
+                  </div>
+                  <lib-skeleton width="90%" height="1.4rem" shape="rounded" customClass="mt-1"></lib-skeleton>
+                  <div class="flex justify-between items-center mt-4">
+                    <lib-skeleton width="80px" height="1.4rem" shape="rounded"></lib-skeleton>
+                    <lib-skeleton width="100px" height="2.2rem" shape="rounded"></lib-skeleton>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Compact Sidebar -->
+        <aside class="shopper-sidebar">
+          <div class="sidebar-section">
+            <h3>Categories</h3>
+            <ul class="cat-list">
+              <li
+                [class.active]="!storeState.selectedCategory()"
+                (click)="selectCategory(null)"
+              >
+                All <span>{{ inventoryService.products().length }}</span>
+              </li>
+              <li
+                *ngFor="let cat of categories()"
+                [class.active]="storeState.selectedCategory() === cat"
+                (click)="selectCategory(cat)"
+              >
+                {{ cat }} <span>{{ getCategoryCount(cat) }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="sidebar-section">
+            <h3>Price</h3>
+            <div class="price-opts">
+              <label class="check-opt"
+                ><input type="checkbox" /> Under $100</label
+              >
+              <label class="check-opt"
+                ><input type="checkbox" /> $100 - $500</label
+              >
+              <label class="check-opt"><input type="checkbox" /> Over $500</label>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <h3>Size</h3>
+            <div class="size-grid">
+              <button class="size-btn">S</button>
+              <button class="size-btn active">M</button>
+              <button class="size-btn">L</button>
+              <button class="size-btn">XL</button>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Mobile Filter Drawer -->
+        <div class="mobile-filter-drawer" [class.open]="isMobileFilterOpen()">
+          <div
+            class="drawer-backdrop"
+            (click)="isMobileFilterOpen.set(false)"
+          ></div>
+          <div class="drawer-content animate-slide-up">
+            <div class="drawer-header">
+              <h3>Filters</h3>
+              <button (click)="isMobileFilterOpen.set(false)">✕</button>
+            </div>
+            <div class="drawer-body">
+              <!-- Reuse sidebar sections or similar -->
+              <div class="sidebar-section">
+                <h3>Categories</h3>
+                <ul class="cat-list">
+                  <li
+                    [class.active]="!storeState.selectedCategory()"
+                    (click)="selectCategory(null); isMobileFilterOpen.set(false)"
+                  >
+                    All <span>{{ inventoryService.products().length }}</span>
+                  </li>
+                  <li
+                    *ngFor="let cat of categories()"
+                    [class.active]="storeState.selectedCategory() === cat"
+                    (click)="selectCategory(cat); isMobileFilterOpen.set(false)"
+                  >
+                    {{ cat }} <span>{{ getCategoryCount(cat) }}</span>
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="load-more-section" *ngIf="hasMoreProducts()">
-          <button
-            class="btn-load-more flex items-center justify-center min-h-[50px] min-w-[240px]"
-            (click)="loadMore()"
-            [disabled]="isLoadingMore()"
+        <!-- Floating Filter FAB (Mobile Only) -->
+        <button
+          class="filter-fab sm:hidden"
+          (click)="isMobileFilterOpen.set(true)"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <lib-loader
-              [loading]="isLoadingMore()"
-              label="Load More Products"
-            ></lib-loader>
-          </button>
-        </div>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+            ></path>
+          </svg>
+          <span>Filters</span>
+        </button>
 
-        <div class="catalog-empty" *ngIf="filteredProducts().length === 0">
-          <div class="empty-icon">🔎</div>
-          <h2>No items</h2>
-          <button class="shopper-btn-primary" (click)="clearFilters()">
-            Clear
-          </button>
+        <!-- Main Content -->
+        <div class="shopper-content">
+          <!-- Compact Header -->
+          <header class="content-header">
+            <div class="h-left">
+              <h1>
+                {{
+                  storeState.showOffersOnly()
+                    ? "Current Offers"
+                    : storeState.selectedCategory() || "All Products"
+                }}
+              </h1>
+              <p class="results-count">
+                {{ filteredProducts().length }} items found
+              </p>
+            </div>
+
+            <div class="h-right">
+              <div
+                class="sort-wrap"
+                (click)="$event.stopPropagation(); toggleSort()"
+              >
+                <button class="sort-btn">
+                  <span>{{ getSortLabel() }}</span>
+                  <span class="chev">▾</span>
+                </button>
+                <div class="sort-menu" *ngIf="isSortOpen()">
+                  <div class="option" (click)="selectSort('name')">Name: A-Z</div>
+                  <div class="option" (click)="selectSort('price-low')">
+                    Price: Low
+                  </div>
+                  <div class="option" (click)="selectSort('price-high')">
+                    Price: High
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <!-- Tight Grid (3-4 columns) -->
+          <div class="shopper-grid">
+            <div
+              class="product-card animate-item-in"
+              *ngFor="let product of visibleProducts(); let i = index"
+              [style.animation-delay]="(i % 4) * 0.1 + 's'"
+            >
+              <div
+                class="card-visual"
+                [routerLink]="['/store/product', product.id]"
+              >
+                <div class="img-bg">
+                  <span class="icon">📦</span>
+                </div>
+                <div class="card-badge" *ngIf="product.stock < 10">Low</div>
+                <div class="offer-tag" *ngIf="getProductOffer(product.id)">
+                  Sale
+                </div>
+
+                <button
+                  class="heart-btn"
+                  [class.active]="wishlist.isInWishlist(product.id)"
+                  (click)="
+                    $event.stopPropagation(); wishlist.toggleWishlist(product)
+                  "
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                    ></path>
+                  </svg>
+                </button>
+
+                <!-- Compact Hover Actions -->
+                <div class="card-hover-actions">
+                  <ng-container
+                    *ngIf="getItemInCart(product.id) as item; else addBtn"
+                  >
+                    <div class="pill-stepper" (click)="$event.stopPropagation()">
+                      <button (click)="updateQty(product.id, item.quantity - 1)">
+                        −
+                      </button>
+                      <span class="val">{{ item.quantity }}</span>
+                      <button (click)="updateQty(product.id, item.quantity + 1)">
+                        +
+                      </button>
+                    </div>
+                  </ng-container>
+                  <ng-template #addBtn>
+                    <button
+                      class="pill-btn add flex items-center justify-center min-w-[100px] min-h-[32px]"
+                      (click)="$event.stopPropagation(); addToCart(product)"
+                      [disabled]="isAddingProduct() === product.id"
+                    >
+                      <lib-loader
+                        [loading]="isAddingProduct() === product.id"
+                        [label]="
+                          isAddingProduct() === product.id ? '' : 'Add to Cart'
+                        "
+                        customClass="scale-75"
+                      ></lib-loader>
+                    </button>
+                  </ng-template>
+                </div>
+              </div>
+
+              <div class="card-info">
+                <div class="info-top">
+                  <span class="category">{{ product.category }}</span>
+                  <span class="stars">★ 4.8</span>
+                </div>
+                <h3 class="name" [routerLink]="['/store/product', product.id]">
+                  {{ product.name }}
+                </h3>
+                <div class="info-bottom">
+                  <div class="flex items-baseline gap-2">
+                    <span
+                      class="price"
+                      [class.text-rose-500]="getProductOffer(product.id)"
+                    >
+                      {{
+                        (getProductOffer(product.id)
+                          ? product.price *
+                            (1 - getProductOffer(product.id)!.discount / 100)
+                          : product.price
+                        ) | currency
+                      }}
+                    </span>
+                    @if (getProductOffer(product.id)) {
+                      <span
+                        class="original text-[10px] text-slate-400 line-through font-bold"
+                      >
+                        {{ product.price | currency }}
+                      </span>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="load-more-section" *ngIf="hasMoreProducts()">
+            <button
+              class="btn-load-more flex items-center justify-center min-h-[50px] min-w-[240px]"
+              (click)="loadMore()"
+              [disabled]="isLoadingMore()"
+            >
+              <lib-loader
+                [loading]="isLoadingMore()"
+                label="Load More Products"
+              ></lib-loader>
+            </button>
+          </div>
+
+          <div class="catalog-empty" *ngIf="filteredProducts().length === 0">
+            <div class="empty-icon">🔎</div>
+            <h2>No items</h2>
+            <button class="shopper-btn-primary" (click)="clearFilters()">
+              Clear
+            </button>
+          </div>
         </div>
-      </div>
+      }
     </div>
   `,
   styles: [
@@ -939,29 +1019,42 @@ export class ProductListComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
+  isLoading = signal(true);
+  private destroyRef = inject(DestroyRef);
+
   ngOnInit() {
     this.loadData();
   }
 
-  async loadData() {
-    try {
-      const [products, offers] = await Promise.all([
-        firstValueFrom(this.http.get<Product[]>(`${this.inventoryService.baseUrl}/products`)),
-        firstValueFrom(this.http.get<Offer[]>(`${this.inventoryService.baseUrl}/offers`)),
-      ]);
-      this.inventoryService.setProducts(products);
-      this.inventoryService.setOffers(offers);
-    } catch (error) {
-      console.error('Error loading product list data:', error);
-    }
+  loadData() {
+    this.isLoading.set(true);
+    const sub = forkJoin([
+      this.http.get<Product[]>(`${this.inventoryService.baseUrl}/products`),
+      this.http.get<Offer[]>(`${this.inventoryService.baseUrl}/offers`),
+    ]).subscribe({
+      next: ([products, offers]) => {
+        this.inventoryService.setProducts(products);
+        this.inventoryService.setOffers(offers);
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading product list data:', error);
+        this.isLoading.set(false);
+      }
+    });
+    this.destroyRef.onDestroy(() => sub.unsubscribe());
   }
 
   constructor() {
-    this.route.url.subscribe(() => this.updateOffersState());
-    this.route.queryParams.subscribe((params) => {
+    const subUrl = this.route.url.subscribe(() => this.updateOffersState());
+    const subParams = this.route.queryParams.subscribe((params) => {
       if (params['category']) {
         this.storeState.setCategory(params['category']);
       }
+    });
+    this.destroyRef.onDestroy(() => {
+      subUrl.unsubscribe();
+      subParams.unsubscribe();
     });
   }
 
@@ -1054,8 +1147,18 @@ export class ProductListComponent implements OnInit {
     this.storeState.setCategory(null);
   }
 
+  productOffersMap = computed(() => {
+    const map = new Map<number, any>();
+    for (const offer of this.inventoryService.offers()) {
+      if (offer.productId !== undefined && offer.productId !== null) {
+        map.set(offer.productId, offer);
+      }
+    }
+    return map;
+  });
+
   getItemInCart(productId: number) {
-    return this.cartService.items().find((i) => i.id === productId);
+    return this.cartService.itemsMap().get(productId);
   }
 
   isAddingProduct = signal<number | null>(null);
@@ -1073,6 +1176,6 @@ export class ProductListComponent implements OnInit {
   }
 
   getProductOffer(productId: number) {
-    return this.inventoryService.offers().find((o) => o.productId === productId);
+    return this.productOffersMap().get(productId);
   }
 }

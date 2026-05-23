@@ -14,6 +14,8 @@ export class CartService {
 
   readonly items = this._items.asReadonly();
 
+  readonly itemsMap = computed(() => new Map(this._items().map((item) => [item.id, item])));
+
   readonly totalItems = computed(() => this._items().reduce((acc, item) => acc + item.quantity, 0));
 
   readonly subtotal = computed(() => this._items().reduce((acc, item) => acc + item.price * item.quantity, 0));
