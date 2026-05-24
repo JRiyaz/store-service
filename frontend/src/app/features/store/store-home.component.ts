@@ -3,294 +3,200 @@ import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, type OnInit, signal, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { InventoryDataService, LoaderComponent, SkeletonComponent, type Offer, type Product, TypewriterComponent } from 'ui-shared';
+import { InventoryDataService, LoaderComponent, type Offer, type Product, TypewriterComponent } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 import { WishlistService } from '../../services/wishlist.service';
 
 @Component({
   selector: 'app-store-home',
   standalone: true,
-  imports: [CommonModule, RouterLink, LoaderComponent, TypewriterComponent, SkeletonComponent],
+  imports: [CommonModule, RouterLink, LoaderComponent, TypewriterComponent],
   template: `
     <div class="store-home animate-fade-in">
-      @if (isLoading()) {
-        <!-- Hero Poster Skeleton -->
-        <section class="hero-poster" style="background: #1f2937;">
-          <div class="hero-content w-full">
-            <lib-skeleton width="180px" height="1.5rem" shape="rounded" customClass="mb-4 opacity-50"></lib-skeleton>
-            <div class="mb-4">
-              <lib-skeleton width="80%" height="3.5rem" shape="rounded" customClass="opacity-70 mb-2"></lib-skeleton>
-              <lib-skeleton width="60%" height="3.5rem" shape="rounded" customClass="opacity-70"></lib-skeleton>
-            </div>
-            <div class="mb-6">
-              <lib-skeleton width="90%" height="1.2rem" shape="rounded" customClass="opacity-50 mb-2"></lib-skeleton>
-              <lib-skeleton width="70%" height="1.2rem" shape="rounded" customClass="opacity-50"></lib-skeleton>
-            </div>
-            <div class="hero-actions flex gap-4">
-              <div style="width: 175px; height: 50px;">
-                <lib-skeleton width="100%" height="100%" shape="rounded"></lib-skeleton>
-              </div>
-              <div style="width: 145px; height: 50px;">
-                <lib-skeleton width="100%" height="100%" shape="rounded" customClass="opacity-50"></lib-skeleton>
-              </div>
-            </div>
-          </div>
-          <div class="hero-visual">
-            <div class="abstract-shape"></div>
-            <lib-skeleton width="15rem" height="15rem" shape="circle" customClass="opacity-10"></lib-skeleton>
-          </div>
-        </section>
-
-        <!-- Offers Carousel Skeleton -->
-        <section class="home-section">
-          <div class="section-header flex justify-between items-center mb-6">
-            <lib-skeleton width="240px" height="2rem" shape="rounded"></lib-skeleton>
-            <lib-skeleton width="70px" height="1.2rem" shape="rounded"></lib-skeleton>
-          </div>
-          <div class="offers-carousel">
-            <div class="offer-slide flex justify-between items-center p-8 bg-slate-100 dark:bg-white/5 rounded-2xl w-full h-full">
-              <div class="slide-content w-2/3">
-                <lib-skeleton width="100px" height="1.5rem" shape="rounded" customClass="mb-4"></lib-skeleton>
-                <lib-skeleton width="80%" height="2.5rem" shape="rounded" customClass="mb-4"></lib-skeleton>
-                <lib-skeleton width="90%" height="1.2rem" shape="rounded" customClass="mb-6"></lib-skeleton>
-                <div style="width: 120px; height: 42px;">
-                  <lib-skeleton width="100%" height="100%" shape="rounded"></lib-skeleton>
-                </div>
-              </div>
-              <div class="slide-visual">
-                <lib-skeleton width="80px" height="80px" shape="rounded"></lib-skeleton>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Featured Categories Skeleton -->
-        <section class="home-section">
-          <div class="section-header flex justify-between items-center mb-6">
-            <lib-skeleton width="180px" height="2rem" shape="rounded"></lib-skeleton>
-            <lib-skeleton width="70px" height="1.2rem" shape="rounded"></lib-skeleton>
-          </div>
-          <div class="categories-strip flex gap-4 overflow-hidden">
-            @for (x of [1, 2, 3, 4, 5, 6]; track x) {
-              <div class="cat-pill flex items-center gap-3 p-4 bg-slate-100 dark:bg-white/5 rounded-2xl min-w-[150px]">
-                <lib-skeleton width="24px" height="24px" shape="circle"></lib-skeleton>
-                <lib-skeleton width="80px" height="1.2rem" shape="rounded"></lib-skeleton>
-              </div>
-            }
-          </div>
-        </section>
-
-        <!-- Trending Products Skeleton -->
-        <section class="home-section">
-          <div class="section-header mb-6">
-            <lib-skeleton width="200px" height="2rem" shape="rounded" customClass="mb-2"></lib-skeleton>
-            <lib-skeleton width="280px" height="1.2rem" shape="rounded"></lib-skeleton>
-          </div>
-          <div class="trending-grid grid grid-cols-2 md:grid-cols-4 gap-6">
-            @for (x of [1, 2, 3, 4, 5, 6, 7, 8]; track x) {
-              <div class="product-card-minimal bg-slate-50 dark:bg-white/5 rounded-xl p-4 flex flex-col gap-4">
-                <div class="visual h-48 bg-slate-100 dark:bg-white/10 rounded-lg flex items-center justify-center">
-                  <lib-skeleton width="64px" height="64px" shape="rounded"></lib-skeleton>
-                </div>
-                <div class="info flex flex-col gap-2">
-                  <lib-skeleton width="60px" height="0.8rem" shape="rounded"></lib-skeleton>
-                  <lib-skeleton width="90%" height="1.2rem" shape="rounded"></lib-skeleton>
-                  <div class="bottom flex justify-between items-center mt-2">
-                    <lib-skeleton width="60px" height="1.2rem" shape="rounded"></lib-skeleton>
-                    <lib-skeleton width="32px" height="32px" shape="circle"></lib-skeleton>
-                  </div>
-                </div>
-              </div>
-            }
-          </div>
-        </section>
-      } @else {
-        <!-- Hero Poster -->
-        <section class="hero-poster">
-          <div class="hero-content">
-            <span class="badge">Spring Collection 2026</span>
-            <h1>
-              <lib-typewriter
-                [words]="[
-                  'Modern Living.',
-                  'Refined Style.',
-                  'Premium Quality.',
-                  'Curated Picks.',
-                ]"
-                [typeSpeed]="80"
-                [deleteSpeed]="40"
-              ></lib-typewriter>
-            </h1>
-            <p>
-              Discover our latest collection of premium home and lifestyle
-              products designed for the contemporary home.
-            </p>
-            <div class="hero-actions">
-              <button class="btn-primary" routerLink="/store/categories" style="min-width: 175px; min-height: 50px;">
-                <lib-loader label="Shop Collection"></lib-loader>
-              </button>
-              <button class="btn-secondary" routerLink="/store/offers" style="min-width: 145px; min-height: 50px;">
-                <lib-loader label="View Offers"></lib-loader>
-              </button>
-            </div>
-          </div>
-          <div class="hero-visual">
-            <div class="abstract-shape"></div>
-            <span class="main-icon">🛋️</span>
-          </div>
-        </section>
-
-        <!-- Offers Carousel -->
-        <section class="home-section" *ngIf="inventory.offers().length > 0">
-          <div class="section-header">
-            <h2>Limited Time Offers</h2>
-            <a routerLink="/store/offers" class="view-all">View All</a>
-          </div>
-
-          <div class="offers-carousel">
-            <div
-              class="carousel-track"
-              [style.transform]="'translateX(-' + activeOfferIndex() * 100 + '%)'"
-            >
-              <div
-                class="offer-slide"
-                *ngFor="let offer of inventory.offers()"
-                [style.background]="offer.color || 'var(--primary)'"
-              >
-                <div class="slide-content">
-                  <span class="slide-badge">{{ offer.discount }}% OFF</span>
-                  <h3>{{ offer.title }}</h3>
-                  <p>{{ offer.description }}</p>
-                  <button
-                    class="slide-btn"
-                    [routerLink]="['/store/categories']"
-                    [queryParams]="{ category: offer.category }"
-                    style="min-width: 120px; min-height: 42px;"
-                  >
-                    <lib-loader label="Shop Now"></lib-loader>
-                  </button>
-                </div>
-                <div class="slide-visual">🎁</div>
-              </div>
-            </div>
-            <div class="carousel-dots">
-              <span
-                *ngFor="let off of inventory.offers(); let i = index"
-                [class.active]="i === activeOfferIndex()"
-                (click)="activeOfferIndex.set(i)"
-              ></span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Featured Categories -->
-        <section class="home-section">
-          <div class="section-header">
-            <h2>Shop by Category</h2>
-            <a routerLink="/store/categories" class="view-all">See All</a>
-          </div>
-          <div class="categories-strip">
-            <div
-              *ngFor="let cat of featuredCategories()"
-              class="cat-pill"
-              [routerLink]="['/store/categories']"
-              [queryParams]="{ category: cat.name }"
-            >
-              <span class="cat-icon">{{ cat.icon }}</span>
-              <span class="cat-name">{{ cat.name }}</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Trending Products -->
-        <section class="home-section">
-          <div class="section-header">
-            <h2>Trending Now</h2>
-            <p class="subtitle">Our most popular items this week.</p>
-          </div>
-
-          <div class="trending-grid">
-            <div
-              *ngFor="let product of trendingProducts(); let i = index"
-              class="product-card-minimal animate-item-in"
-              [style.animation-delay]="(i % 4) * 0.1 + 's'"
-            >
-              <div class="visual" [routerLink]="['/store/product', product.id]">
-                <span class="icon">📦</span>
-                <button
-                  class="wish-btn"
-                  (click)="
-                    $event.stopPropagation(); wishlist.toggleWishlist(product)
-                  "
-                  [class.active]="wishlist.isInWishlist(product.id)"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                  >
-                    <path
-                      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                    ></path>
-                  </svg>
-                </button>
-              </div>
-              <div class="info">
-                <span class="cat">{{ product.category }}</span>
-                <h4>{{ product.name }}</h4>
-                <div class="bottom">
-                  <span class="price">{{ product.price | currency }}</span>
-
-                  <ng-container
-                    *ngIf="getItemInCart(product.id) as item; else addBtn"
-                  >
-                    <div class="home-stepper" (click)="$event.stopPropagation()">
-                      <button (click)="updateQty(product.id, item.quantity - 1)">
-                        −
-                      </button>
-                      <span class="val">{{ item.quantity }}</span>
-                      <button (click)="updateQty(product.id, item.quantity + 1)">
-                        +
-                      </button>
-                    </div>
-                  </ng-container>
-                  <ng-template #addBtn>
-                    <button
-                      class="add-btn flex items-center justify-center"
-                      (click)="$event.stopPropagation(); addToCart(product)"
-                      [disabled]="isAddingProduct() === product.id"
-                      style="width: 32px; height: 32px;"
-                    >
-                      <span *ngIf="isAddingProduct() !== product.id">+</span>
-                      <lib-loader
-                        *ngIf="isAddingProduct() === product.id"
-                        [loading]="true"
-                        customClass="scale-50 !text-white"
-                      ></lib-loader>
-                    </button>
-                  </ng-template>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="load-more-section" *ngIf="hasMoreProducts()">
-            <button
-              class="btn-load-more flex items-center justify-center min-h-[50px] min-w-[240px]"
-              (click)="loadMore()"
-              [disabled]="isLoadingMore()"
-            >
-              <lib-loader
-                [loading]="isLoadingMore()"
-                label="Load More Items"
-              ></lib-loader>
+      <!-- Hero Poster -->
+      <section class="hero-poster">
+        <div class="hero-content">
+          <span class="badge">Spring Collection 2026</span>
+          <h1>
+            <lib-typewriter
+              [words]="[
+                'Modern Living.',
+                'Refined Style.',
+                'Premium Quality.',
+                'Curated Picks.',
+              ]"
+              [typeSpeed]="80"
+              [deleteSpeed]="40"
+            ></lib-typewriter>
+          </h1>
+          <p>
+            Discover our latest collection of premium home and lifestyle
+            products designed for the contemporary home.
+          </p>
+          <div class="hero-actions">
+            <button class="btn-primary" routerLink="/store/categories" style="min-width: 175px; min-height: 50px;">
+              <lib-loader label="Shop Collection"></lib-loader>
+            </button>
+            <button class="btn-secondary" routerLink="/store/offers" style="min-width: 145px; min-height: 50px;">
+              <lib-loader label="View Offers"></lib-loader>
             </button>
           </div>
-        </section>
-      }
+        </div>
+        <div class="hero-visual">
+          <div class="abstract-shape"></div>
+          <span class="main-icon">🛋️</span>
+        </div>
+      </section>
+
+      <!-- Offers Carousel -->
+      <section class="home-section" *ngIf="inventory.offers().length > 0">
+        <div class="section-header">
+          <h2>Limited Time Offers</h2>
+          <a routerLink="/store/offers" class="view-all">View All</a>
+        </div>
+
+        <div class="offers-carousel">
+          <div
+            class="carousel-track"
+            [style.transform]="'translateX(-' + activeOfferIndex() * 100 + '%)'"
+          >
+            <div
+              class="offer-slide"
+              *ngFor="let offer of inventory.offers()"
+              [style.background]="offer.color || 'var(--primary)'"
+            >
+              <div class="slide-content">
+                <span class="slide-badge">{{ offer.discount }}% OFF</span>
+                <h3>{{ offer.title }}</h3>
+                <p>{{ offer.description }}</p>
+                <button
+                  class="slide-btn"
+                  [routerLink]="['/store/categories']"
+                  [queryParams]="{ category: offer.category }"
+                  style="min-width: 120px; min-height: 42px;"
+                >
+                  <lib-loader label="Shop Now"></lib-loader>
+                </button>
+              </div>
+              <div class="slide-visual">🎁</div>
+            </div>
+          </div>
+          <div class="carousel-dots">
+            <span
+              *ngFor="let off of inventory.offers(); let i = index"
+              [class.active]="i === activeOfferIndex()"
+              (click)="activeOfferIndex.set(i)"
+            ></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Featured Categories -->
+      <section class="home-section">
+        <div class="section-header">
+          <h2>Shop by Category</h2>
+          <a routerLink="/store/categories" class="view-all">See All</a>
+        </div>
+        <div class="categories-strip">
+          <div
+            *ngFor="let cat of featuredCategories()"
+            class="cat-pill"
+            [routerLink]="['/store/categories']"
+            [queryParams]="{ category: cat.name }"
+          >
+            <span class="cat-icon">{{ cat.icon }}</span>
+            <span class="cat-name">{{ cat.name }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trending Products -->
+      <section class="home-section">
+        <div class="section-header">
+          <h2>Trending Now</h2>
+          <p class="subtitle">Our most popular items this week.</p>
+        </div>
+
+        <div class="trending-grid">
+          <div
+            *ngFor="let product of trendingProducts(); let i = index"
+            class="product-card-minimal animate-item-in"
+            [style.animation-delay]="(i % 4) * 0.1 + 's'"
+          >
+            <div class="visual" [routerLink]="['/store/product', product.id]">
+              <span class="icon">📦</span>
+              <button
+                class="wish-btn"
+                (click)="
+                  $event.stopPropagation(); wishlist.toggleWishlist(product)
+                "
+                [class.active]="wishlist.isInWishlist(product.id)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path
+                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+            <div class="info">
+              <span class="cat">{{ product.category }}</span>
+              <h4 [routerLink]="['/store/product', product.id]" class="cursor-pointer hover:text-primary transition-colors">{{ product.name }}</h4>
+              <div class="bottom">
+                <span class="price">{{ product.price | currency }}</span>
+
+                <ng-container
+                  *ngIf="getItemInCart(product.id) as item; else addBtn"
+                >
+                  <div class="home-stepper" (click)="$event.stopPropagation()">
+                    <button (click)="updateQty(product.id, item.quantity - 1)">
+                      −
+                    </button>
+                    <span class="val">{{ item.quantity }}</span>
+                    <button (click)="updateQty(product.id, item.quantity + 1)">
+                      +
+                    </button>
+                  </div>
+                </ng-container>
+                <ng-template #addBtn>
+                  <button
+                    class="add-btn"
+                    (click)="$event.stopPropagation(); addToCart(product)"
+                    [disabled]="isAddingProduct() === product.id"
+                  >
+                    <span *ngIf="isAddingProduct() !== product.id">+</span>
+                    <lib-loader
+                      *ngIf="isAddingProduct() === product.id"
+                      [loading]="true"
+                      customClass="scale-50 !text-white"
+                    ></lib-loader>
+                  </button>
+                </ng-template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="load-more-section" *ngIf="hasMoreProducts()">
+          <button
+            class="btn-load-more flex items-center justify-center min-h-[50px] min-w-[240px]"
+            (click)="loadMore()"
+            [disabled]="isLoadingMore()"
+          >
+            <lib-loader
+              [loading]="isLoadingMore()"
+              label="Load More Items"
+            ></lib-loader>
+          </button>
+        </div>
+      </section>
     </div>
   `,
   styles: [
@@ -587,7 +493,13 @@ import { WishlistService } from '../../services/wishlist.service';
       .info h4 {
         font-size: 1.1rem;
         font-weight: 800;
-        margin: 0.5rem 0 1.25rem;
+        margin: 0.5rem 0 1rem;
+        line-height: 1.3;
+        min-height: 2.8rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
       .bottom {
         display: flex;
@@ -599,16 +511,21 @@ import { WishlistService } from '../../services/wishlist.service';
         font-weight: 950;
       }
       .add-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 12px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50% !important;
         background: var(--primary);
         color: white;
         border: none;
-        font-size: 1.5rem;
-        font-weight: 400;
+        font-size: 1.25rem;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1 !important;
+        padding: 0 !important;
       }
       .add-btn:hover {
         background: #5a61e6;

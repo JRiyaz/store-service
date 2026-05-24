@@ -817,6 +817,12 @@ import { WishlistService } from '../../services/wishlist.service';
         color: var(--text);
         cursor: pointer;
         transition: color 0.1s;
+        line-height: 1.3;
+        min-height: 2.5rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
       .card-info h3:hover {
         color: var(--primary);

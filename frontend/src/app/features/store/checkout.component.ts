@@ -676,6 +676,7 @@ export class CheckoutComponent {
         qty: item.quantity,
         price: item.price,
       })),
+      createdBy: 'Customer',
     };
 
     const sub = this.http.post<Order>(`${this.inventoryService.baseUrl}/orders`, newOrder).subscribe({
