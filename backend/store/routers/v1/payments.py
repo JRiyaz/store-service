@@ -1,11 +1,12 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from store.database import get_db
-from store.models.domain import SalesOrder, SalesPayment
+from store.models.domain import SalesOrder, SalesPayment, Customer
 from store.schemas.payment import SalesPaymentCreate, SalesPaymentResponse
 from store.utils.dependencies import RoleChecker, AuthenticatedUser
+from store.utils.email import send_invoice_receipt_email
 
 router = APIRouter(prefix="/payments", tags=["Payments Ledger"])
 
@@ -25,12 +26,14 @@ async def list_payments(
 @router.post("", response_model=SalesPaymentResponse, status_code=status.HTTP_201_CREATED)
 async def process_payment(
     payload: SalesPaymentCreate,
+    background_tasks: BackgroundTasks,
     current_user: AuthenticatedUser = Depends(RoleChecker(["Admin", "Agent"])),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Processes a storefront order checkout payment.
     Strictly transaction-safe: marks order Paid and updates payments ledger.
+    Triggers asynchronous delivery of the receipt invoice to the customer billing email.
     """
     # Fetch Target SalesOrder
     order_res = await db.execute(select(SalesOrder).where(SalesOrder.id == payload.order_id))
@@ -53,6 +56,10 @@ async def process_payment(
             detail="Payment transaction aborted: order has been cancelled"
         )
 
+    # Fetch Customer to retrieve billing email
+    cust_res = await db.execute(select(Customer).where(Customer.id == order.customer_id))
+    customer = cust_res.scalar_one_or_none()
+
     # Process and log transaction details
     tx_ref = payload.transaction_reference or f"TXN-{uuid.uuid4().hex[:12].upper()}"
 
@@ -74,4 +81,10 @@ async def process_payment(
     # Commit atomic payment transaction
     await db.commit()
     await db.refresh(payment)
+
+    # Trigger background receipt dispatch asynchronously
+    if customer:
+        background_tasks.add_task(send_invoice_receipt_email, order, customer)
+
     return payment
+

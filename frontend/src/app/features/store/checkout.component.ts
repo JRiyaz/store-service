@@ -3,14 +3,15 @@ import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal, DestroyRef } from '@angular/core';
 import { FormBuilder, type FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { DomSanitizer, type SafeResourceUrl } from '@angular/platform-browser';
 
-import { AuthStateService, InventoryDataService, LoaderComponent, NotificationService, type Order } from 'ui-shared';
+import { AuthStateService, InventoryDataService, LoaderComponent, NotificationService, AutocompleteComponent, type Order } from 'ui-shared';
 import { CartService } from '../../services/cart.service';
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, LoaderComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, LoaderComponent, AutocompleteComponent],
   template: `
     <div class="shopper-checkout animate-fade-in">
       <header class="checkout-head">
@@ -180,10 +181,20 @@ import { CartService } from '../../services/cart.service';
           </form>
         </div>
 
-        <!-- Summary Column -->
+         <!-- Summary Column -->
         <aside class="summary-column">
           <div class="summary-box shopper-card">
             <h3>Order Summary</h3>
+
+            <!-- Fuzzy Autocomplete Quick Add Promo Item -->
+            <div class="quick-add-product mb-6 border-b border-dashed border-slate-200 dark:border-white/10 pb-5">
+              <h4 class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">Quick Add Promo / Item</h4>
+              <lib-autocomplete
+                [items]="inventoryService.products()"
+                placeholder="Fuzzy-search promo or SKU..."
+                (selected)="quickAddProduct($event)"
+              />
+            </div>
 
             <div class="summary-items">
               <div class="mi-item" *ngFor="let item of cartService.items()">
@@ -248,7 +259,7 @@ import { CartService } from '../../services/cart.service';
       </div>
 
       <ng-template #successState>
-        <div class="shopper-success-card shopper-card animate-fade-in">
+        <div class="shopper-success-card shopper-card animate-fade-in !max-w-[850px] !w-full mx-auto flex flex-col items-center">
           <div class="succ-icon">
             <svg
               width="64"
@@ -266,10 +277,25 @@ import { CartService } from '../../services/cart.service';
           </div>
           <h2>Order Confirmed</h2>
           <p>
-            Order ID: <b>#{{ orderId() }}</b
-            >. We've sent a confirmation email.
+            Order ID: <b>#{{ orderId() }}</b>. We've dispatched a transaction receipt to your billing email.
           </p>
-          <div class="succ-actions">
+
+          <!-- Glassmorphic Print-Ready Receipt Invoice Frame -->
+          @if (invoiceUrl()) {
+            <div class="invoice-frame-container w-full mt-6 bg-slate-500/5 dark:bg-white/5 rounded-3xl p-4 border border-slate-200/50 dark:border-white/10 backdrop-blur-3xl shadow-2xl flex flex-col gap-3">
+              <h3 class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center justify-center gap-2">
+                <span>📄</span> Premium Live Invoice Receipt (SSRF-Guarded)
+              </h3>
+              <div class="overflow-hidden rounded-2xl border border-slate-200/50 dark:border-white/10 h-[520px] bg-white dark:bg-dark-base relative">
+                <iframe
+                  [src]="invoiceUrl()"
+                  class="w-full h-full border-none"
+                ></iframe>
+              </div>
+            </div>
+          }
+
+          <div class="succ-actions mt-4">
             <button
               class="btn-confirm !w-auto !px-10"
               routerLink="/store/orders"
@@ -592,11 +618,13 @@ export class CheckoutComponent {
   private notify = inject(NotificationService);
   cartService = inject(CartService);
   authService = inject(AuthStateService);
-  private inventoryService = inject(InventoryDataService);
+  inventoryService = inject(InventoryDataService);
+  private sanitizer = inject(DomSanitizer);
 
   processing = signal(false);
   success = signal(false);
   orderId = signal('');
+  invoiceUrl = signal<SafeResourceUrl | null>(null);
   private destroyRef = inject(DestroyRef);
 
   checkoutForm: FormGroup = this.fb.group({
@@ -612,6 +640,15 @@ export class CheckoutComponent {
   });
 
   constructor() {
+    // Proactively fetch products list for fuzzy autocomplete if not populated
+    if (this.inventoryService.products().length === 0) {
+      const subProd = this.http.get<any[]>(`${this.inventoryService.baseUrl}/products?limit=100`).subscribe({
+        next: (data) => this.inventoryService.setProducts(data),
+        error: (err) => console.error('Failed to load products for checkout fuzzy autocomplete:', err)
+      });
+      this.destroyRef.onDestroy(() => subProd.unsubscribe());
+    }
+
     const sub = this.checkoutForm.get('paymentMethod')?.valueChanges.subscribe((method) => {
       const cardControls = ['cardNumber', 'expiry', 'cvc'];
       if (method === 'paypal') {
@@ -651,6 +688,10 @@ export class CheckoutComponent {
     return control ? control.invalid && control.touched : false;
   }
 
+  quickAddProduct(product: any) {
+    this.cartService.addToCart(product);
+  }
+
   processPayment() {
     if (this.checkoutForm.invalid) {
       this.checkoutForm.markAllAsTouched();
@@ -682,7 +723,13 @@ export class CheckoutComponent {
     const sub = this.http.post<Order>(`${this.inventoryService.baseUrl}/orders`, newOrder).subscribe({
       next: (data) => {
         this.inventoryService.addOrderToState(data);
-        this.orderId.set(id);
+        const orderIdVal = data.id || id;
+        this.orderId.set(orderIdVal);
+        
+        // Generate sanitized live invoice receipt URL (direct from store-service)
+        const rawUrl = `http://localhost:8003/api/v1/orders/${orderIdVal}/invoice`;
+        this.invoiceUrl.set(this.sanitizer.bypassSecurityTrustResourceUrl(rawUrl));
+
         this.success.set(true);
         this.cartService.clearCart();
         this.processing.set(false);
