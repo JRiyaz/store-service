@@ -8,6 +8,7 @@ class Customer(SQLModel, table=True):
     phone: str | None = Field(default=None)
     address: str | None = Field(default=None)
     company: str | None = Field(default=None)
+    avatar_url: str | None = Field(default=None)
 
 class SalesOrder(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)

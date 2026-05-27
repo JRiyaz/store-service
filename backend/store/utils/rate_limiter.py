@@ -1,5 +1,6 @@
 import time
-from fastapi import Request, HTTPException, status
+from fastapi import HTTPException, status
+from starlette.requests import HTTPConnection
 from store.config import settings
 
 class InMemoryRateLimiter:
@@ -20,7 +21,10 @@ class InMemoryRateLimiter:
         
         self.history: dict[str, list[float]] = {}
 
-    async def __call__(self, request: Request) -> None:
+    async def __call__(
+        self,
+        request: HTTPConnection
+    ) -> None:
         if not self.enabled:
             return
 
